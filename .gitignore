@@ -1,0 +1,23 @@
+# 執行期與可重建之產物——不入庫
+Python/
+__pycache__/
+*.pyc
+
+# 列印產物（PDF／DOCX／HTML／中介 md／暖起點快取）：管線可重建，唯留管線自身
+_print/*
+!_print/build38.py
+!_print/build_hulan.py
+!_print/verify38.py
+!_print/verify_hulan.py
+!_print/print38.css
+!_print/mmdcfg.json
+
+# 階段備檔：git 即版本庫，備檔留磁碟即可
+_archive/備份/
+
+# 一次性工作器（內含本機絕對路徑・已用畢）
+_merge/depath.py
+_merge/depath2.py
+_merge/precommit.py
+_merge/sanitize.py
+_work/b.log

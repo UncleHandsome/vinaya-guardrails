@@ -1,0 +1,87 @@
+# 搬移清冊 MOVED-20261018（由 _merge/tidy_move.py --go 產）
+
+緣起：清理根目錄與 _work，將舊版・一次性腳本・舊產出歸入 _archive 之下。
+法則：逐名列檔，不用前綴通配；目標已存在即拒搬；釘死檔（編纂底冊・編年日誌・正本・SOP・_tk・hulan_path・verify_audit）自證在原處。
+復原：本冊每行作 `源 <TAB> 的`，可逐枚原路搬回（見文末一行式）。
+
+_archive\主檔備份-20261016-底冊未移.md	_archive\備份\主檔備份-20261016-底冊未移.md
+_archive\佛陀的護欄_backup_20261015_波羅夷章前.txt	_archive\備份\佛陀的護欄_backup_20261015_波羅夷章前.txt
+_archive\佛陀的護欄_backup_20261015_圍欄重排前.txt	_archive\備份\佛陀的護欄_backup_20261015_圍欄重排前.txt
+_archive\佛陀的護欄_backup_20261015_簡形修前.txt	_archive\備份\佛陀的護欄_backup_20261015_簡形修前.txt
+_archive\佛陀的護欄_backup_20261015_補八案前.txt	_archive\備份\佛陀的護欄_backup_20261015_補八案前.txt
+_archive\佛陀的護欄_backup_20261015_補八案乙前.txt	_archive\備份\佛陀的護欄_backup_20261015_補八案乙前.txt
+_archive\佛陀的護欄_backup_20261015_補八案丙前.txt	_archive\備份\佛陀的護欄_backup_20261015_補八案丙前.txt
+_archive\佛陀的護欄_backup_20261015_補九案前.txt	_archive\備份\佛陀的護欄_backup_20261015_補九案前.txt
+_archive\佛陀的護欄_backup_20261015_補十一案前.txt	_archive\備份\佛陀的護欄_backup_20261015_補十一案前.txt
+_work\bak_r13.txt	_archive\備份\bak_r13.txt
+_archive\r19move.py	_archive\一次性\r19move.py
+_archive\r19repoint.py	_archive\一次性\r19repoint.py
+_work\r16fix.py	_archive\一次性\r16fix.py
+_work\r170negtest.py	_archive\一次性\r170negtest.py
+_work\r173negtest.py	_archive\一次性\r173negtest.py
+_work\r179sync.py	_archive\一次性\r179sync.py
+_work\r180negtest.py	_archive\一次性\r180negtest.py
+_work\r215negtest.py	_archive\一次性\r215negtest.py
+_work\r236gate.py	_archive\一次性\r236gate.py
+_work\verify_bq.txt	_archive\一次性\產出\verify_bq.txt
+_work\verify_bqa.txt	_archive\一次性\產出\verify_bqa.txt
+_work\verify_c6.txt	_archive\一次性\產出\verify_c6.txt
+_work\verify_f.txt	_archive\一次性\產出\verify_f.txt
+
+## 一行式復原（PowerShell 逐行粘貼即可；先 cd 至工作資料夾）
+
+Move-Item -LiteralPath '_archive\備份\主檔備份-20261016-底冊未移.md' -Destination '_archive\主檔備份-20261016-底冊未移.md'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_波羅夷章前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_波羅夷章前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_圍欄重排前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_圍欄重排前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_簡形修前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_簡形修前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_補八案前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_補八案前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_補八案乙前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_補八案乙前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_補八案丙前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_補八案丙前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_補九案前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_補九案前.txt'
+Move-Item -LiteralPath '_archive\備份\佛陀的護欄_backup_20261015_補十一案前.txt' -Destination '_archive\佛陀的護欄_backup_20261015_補十一案前.txt'
+Move-Item -LiteralPath '_archive\備份\bak_r13.txt' -Destination '_work\bak_r13.txt'
+Move-Item -LiteralPath '_archive\一次性\r19move.py' -Destination '_archive\r19move.py'
+Move-Item -LiteralPath '_archive\一次性\r19repoint.py' -Destination '_archive\r19repoint.py'
+Move-Item -LiteralPath '_archive\一次性\r16fix.py' -Destination '_work\r16fix.py'
+Move-Item -LiteralPath '_archive\一次性\r170negtest.py' -Destination '_work\r170negtest.py'
+Move-Item -LiteralPath '_archive\一次性\r173negtest.py' -Destination '_work\r173negtest.py'
+Move-Item -LiteralPath '_archive\一次性\r179sync.py' -Destination '_work\r179sync.py'
+Move-Item -LiteralPath '_archive\一次性\r180negtest.py' -Destination '_work\r180negtest.py'
+Move-Item -LiteralPath '_archive\一次性\r215negtest.py' -Destination '_work\r215negtest.py'
+Move-Item -LiteralPath '_archive\一次性\r236gate.py' -Destination '_work\r236gate.py'
+Move-Item -LiteralPath '_archive\一次性\產出\verify_bq.txt' -Destination '_work\verify_bq.txt'
+Move-Item -LiteralPath '_archive\一次性\產出\verify_bqa.txt' -Destination '_work\verify_bqa.txt'
+Move-Item -LiteralPath '_archive\一次性\產出\verify_c6.txt' -Destination '_work\verify_c6.txt'
+Move-Item -LiteralPath '_archive\一次性\產出\verify_f.txt' -Destination '_work\verify_f.txt'
+
+## 正本未動之證
+
+ver38四分律_起心動念心智分析框架_修正版.md  跑前 118a5961c090abf2 → 跑後 118a5961c090abf2  同（未動）
+佛陀的護欄 四分律比丘與比丘尼戒的行為心理學解析.txt  跑前 a6a289211af5715e → 跑後 a6a289211af5715e  同（未動）
+
+## 搬後復核（三關俱綠）
+
+- `_work/srccchk.py`（路徑法源尺）：丙 HP.SRC＝根目錄唯一正本 True｜判 合格｜rc=0
+- `_work/hlbattery.py`（護欄 17 尺）：不合格 無｜正文檔未動 a6a289211af5715e｜rc=0
+- `python _tk.py check`（框架諸閘）：不變量 95/95 PASS｜rc=0
+
+## 明查而不搬者（每一處皆有載體為據）
+
+1. `_archive/ver35…md`、`_archive/ver36…md`、`_archive/verify31/32/35.py`、`verify35_run.log`、`ref.txt`
+   —— **不搬**。理由：`列印SOP.md` 第 82 行明文載其座次為 `_archive/`（「已移入 _archive/，未銷毀，供回溯」），
+   且 `_work/clean82.py` 依名取用 `ref.txt` 與 verify3x；改其座次即令記錄檔之宣稱落空（改一處宣稱須先窮舉其載體）。
+2. `_print/`（180MB）—— **無一舊版可清**：四式交付（短名＋長名兩份，係管線故意之複製）、中介 md/html、
+   `_toccache_*.json`（暖起點快取，刪之則每式重建多耗時）、`_retired_31版/`（31 版早已另地封存）皆屬現行或自制。
+3. `__pycache__/`（根・_work・_print）—— 不刪。理由：昔有以 pyc 指紋救回誤刪腳本之例，留為指紋庫。
+4. `Python/`（77MB）—— **未動，候裁**。其中 `pythoncore-3.15-64` 28M、`_pythoncore-3.15-64` 46M（下標前綴者乃更新時之_stage_舊身）、
+   `*.deleteme` 23 項 3.5M。全書 265＋支腳本俱無一處引用 `Python/`，本管線所用為系統 Python 3.14
+   （`<HOME>\AppData\Local\Programs\Python\Python314\python.exe`）。疑為某工具之嵌入式執行期，非本書之舊版，
+   故只報不搬；如著者確認可清，回收約 49.5MB（46M＋3.5M）。
+
+## 本器自身之歸處
+
+搬毕，`_merge/tidy_move.py` 已隨其所造之帳同入 `_archive/一次性/`；`_merge/` 今唯留長駐之合編量尺 `merge_census.py`。
+本冊逐行作 `源 <TAB> 的`，照上『一行式復原』段即可逐枚原路搬回。
+
+
+〔附註・2026-10-18〕本冊內之機器絕對路徑前綴已掩為 `<HOME>`（僅掩前綴，逐條內容未動・時間與檔名與原因俱在）。掩之為入公開庫計：不留使用者名與資料夾結構。

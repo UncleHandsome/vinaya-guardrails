@@ -1,0 +1,254 @@
+@charset "UTF-8";
+/* ══════════════════════════════════════════════════════════════════
+   《四分律》起心動念心智分析框架 · 第三十八版 · 列印版
+   print38.css（承 print31.css，檔名隨版次合一；頁碼口徑見下方 @page 註）
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── 頁面：A4、外 10mm／內 18mm 鏡像（270 頁膠裝吃脊補償）、下緣 14mm 供頁碼帶；封面另立具名頁面 ── */
+@page {
+  size: A4;
+  margin: 10mm 10mm 14mm 10mm;
+  @bottom-center {
+    content: counter(page);
+    font-family: "Microsoft JhengHei", sans-serif;
+    font-size: 9.4pt; color: #333;
+    vertical-align: top; padding-top: 2.4mm;
+  }
+}
+@page :left { margin-left: 18mm; margin-right: 10mm; }
+@page :right { margin-left: 10mm; margin-right: 18mm; }
+@page :blank { @bottom-center { content: none; } }
+@page :first { @bottom-center { content: none; } }
+@page cover { margin: 0; @bottom-center { content: none; } }
+/* 頁碼口徑（第五十輪定案）：頁腳一律印 counter(page)，即全冊絕對頁碼（＝PDF 物理頁），
+   卷首、正文、附錄一脈相承，不復位；目錄三頁以同一計數改作羅馬數字示之。
+   目錄所載頁碼即此絕對頁碼（由 python 回填），故「目錄號＝頁腳號」，翻頁可直查。 */
+@page toc {
+  @bottom-center {
+    content: counter(page, lower-roman);
+    font-family: "Microsoft JhengHei", sans-serif;
+    font-size: 9.4pt; color: #333;
+    vertical-align: top; padding-top: 2.4mm;
+  }
+}
+/* 卷首與目錄同以具名頁 `toc` 印羅馬頁碼（.fm 容器由 build38 於 HTML 中包出）；
+   正文起則仍印全冊絕對阿拉伯頁碼，故「目錄號＝頁腳號＝物理頁」之口徑不動。 */
+.fm { page: toc; }
+
+html { font-size: 12.2pt; }
+body {
+  font-family: "Microsoft JhengHei", "微軟正黑體", "MingLiU", "PMingLiU", sans-serif;
+  line-height: 1.32; color: #111; margin: 0; padding: 0;
+  word-break: normal; overflow-wrap: break-word; text-align: left;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   壹、封面（簡約風：無框、大留白、一線分隔）
+   ══════════════════════════════════════════════════════════════════ */
+#print-cover { page: cover; break-after: page; }
+.cov {
+  box-sizing: border-box;
+  width: 210mm; height: 296.6mm;
+  padding: 24mm 22mm 32mm;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.cov-eyebrow {
+  font-size: 11pt; letter-spacing: .3em; text-indent: .3em;
+  color: #444; margin: 0;
+}
+.cov-main { margin: 10mm 0 0; }
+.cov-sutra {
+  font-family: "MingLiU", "PMingLiU", "Microsoft JhengHei", serif;
+  font-size: 30pt; letter-spacing: .2em; text-indent: .2em;
+  line-height: 1.3; color: #000; font-weight: 600; margin: 0;
+}
+.cov-title {
+  font-family: "MingLiU", "PMingLiU", "Microsoft JhengHei", serif;
+  font-size: 22pt; letter-spacing: .12em; text-indent: .12em;
+  line-height: 1.4; color: #000; margin: 4mm 0 0; font-weight: 600;
+}
+.cov-rule { width: 16mm; border-top: 1.2px solid #555; margin: 9mm auto; }
+.cov-sub {
+  font-size: 12.5pt; line-height: 1.8; color: #333;
+  letter-spacing: .06em; margin: 0;
+}
+.cov-motto {
+  font-family: "MingLiU", "PMingLiU", "Microsoft JhengHei", serif;
+  font-size: 13.5pt; line-height: 2.05; letter-spacing: .14em; text-indent: .14em;
+  color: #000; font-weight: 600; margin: 11mm 0 0;
+}
+.cov-cap {
+  font-size: 10.5pt; letter-spacing: .22em; text-indent: .22em;
+  color: #555; margin: 4.5mm 0 0;
+}
+.cov-foot { margin: 12mm 0 0; }
+.cov-edition {
+  font-size: 12.5pt; letter-spacing: .22em; text-indent: .22em;
+  color: #111; font-weight: 600; margin: 0 0 4mm;
+}
+.cov-meta {
+  font-size: 10.5pt; line-height: 1.75; letter-spacing: .1em; text-indent: .1em;
+  color: #444; margin: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   貳、正文版式
+   ══════════════════════════════════════════════════════════════════ */
+/* （第七十六輪：正文起點已改 HTML 註解，不生元素，故無須隱藏規則。
+     舊法以 0.35pt 白字藏「【正文起點】」四字，瀏覽器列印仍照印，並在正文前撐出一整頁空白。） */
+
+/* 目錄頁碼：由 build38.py 回填「PDF 絕對頁碼」，與頁腳所印完全一致。
+   （舊口徑曾印正文相對頁碼，遂令目錄號恆較頁腳號小卷首之數，全書檢索失效，
+     而驗收器又用同一假設反推，系統性偏移自證為零——第五十輪已改弦更張。） */
+/* 章級 H1 一律另起新頁（第 109 輪之根治）：
+   舊寫 `body > h1 { break-before: right }` 於本管線全然無效——一則無頭 Chromium 不認 right／verso
+   頁別（唯 page／always／avoid 見納），二則本冊 pandoc 產物之 H1 非 body 之直接子（實測：
+   `body > h1{break-before:page!important}` 章題居頁首 2/10，改 `h1{...!important}` 則 10/10）。
+   引文內裝飾 H1（如附錄A 之「歇」）由下條 blockquote h1 之 avoid 守住（較 specificity 勝）。*/
+h1 {
+  font-size: 22.4pt; line-height: 1.30; text-align: center; font-weight: 700;
+  margin: 0 0 .3em; padding: 0 0 .4em; border-bottom: 2.5px solid #222;
+  letter-spacing: .02em;
+  break-before: page;
+}
+h1 {
+  font-size: 22.4pt; line-height: 1.30; text-align: center; font-weight: 700;
+  margin: 0 0 .3em; padding: 0 0 .4em; border-bottom: 2.5px solid #222;
+  letter-spacing: .02em;
+}
+/* 引文內標題（如宗門「歇」）禁前斷頁，與上段引導語同頁（P258-259 斷頭之根治） */
+blockquote h1, blockquote h2, blockquote h3 { break-before: avoid; }
+h1 + p { text-align: center; font-size: 12.8pt; color: #444; margin: 0 0 1.2em; }
+h2 {
+  font-size: 17.2pt; font-weight: 700; margin: .75em 0 .45em; padding: .25em .5em;
+  border-left: 7px solid #222; background: #f1f1f1; page-break-after: avoid;
+}
+h3 {
+  font-size: 14.0pt; font-weight: 700; margin: .6em 0 .32em; padding-bottom: .15em;
+  border-bottom: 1px solid #b9b9b9; page-break-after: avoid; text-align: left;
+}
+h4 { font-size: 13.0pt; font-weight: 700; margin: .55em 0 .25em; page-break-after: avoid; text-align: left; }
+h5, h6 { font-size: 12.4pt; font-weight: 700; margin: .5em 0 .22em; page-break-after: avoid; }
+
+p { margin: .28em 0; orphans: 3; widows: 3; text-align: justify; }
+/* 標題與下段綁定同頁（keep-with-next）：杜絕 H2/H3/H4/H5 壓底孤立（P235 第五節、P126 〔遮1〕之類） */
+h1 + *, h2 + *, h3 + *, h4 + *, h5 + * { break-before: avoid; }
+strong { font-weight: 700; }
+
+blockquote {
+  margin: .4em 0; padding: .32em .7em;
+  border: 1px solid #d9d9d9; border-left: 4px solid #555;
+  background: #f7f7f7; color: #1a1a1a; break-inside: auto; page-break-inside: auto; orphans: 4; widows: 4; /* ver38補：引文框內至少留 4 行，杜絕「只說了這一個字：」與「歇」之類斷頭（P258-259） */
+}
+/* 短引用框整體禁跨頁（keep-together）：由 build38.quote_keep() 按字數自動掛載，根治 P66 檢核框、P98 卸甲窗之類框頭孤立 */
+blockquote.keep { break-inside: avoid; page-break-inside: avoid; }
+blockquote p { margin: .22em 0; text-align: left; }
+blockquote blockquote { background: #efefef; }
+
+ul, ol { margin: .25em 0 .25em 1.35em; padding-left: .75em; }
+li { margin: .10em 0; text-align: justify; }
+
+table {
+  border-collapse: collapse; width: 100%; margin: .3em 0;
+  font-size: 10.3pt; line-height: 1.22; table-layout: auto; break-inside: auto;
+  orphans: 3; widows: 3;
+}
+/* 小表整體禁跨頁（P15-16 三十二字對稱表之類）：由 build38.table_keep() 按列數自動掛載 */
+table.keep { break-inside: avoid; page-break-inside: avoid; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+th, td {
+  border: .6px solid #9a9a9a; padding: .08em .25em; vertical-align: top;
+  text-align: left; overflow-wrap: normal; hyphens: none;
+}
+th, td > p { margin: 0; text-align: left; }
+td > p + p, th > p + p { margin-top: .12em; }
+th { background: #e8e8e8; font-weight: 700; }
+tbody tr:nth-child(even) { background: #fafafa; }
+
+pre {
+  font-family: "Consolas", "Courier New", "Microsoft JhengHei", monospace;
+  font-size: 10.8pt; line-height: 1.34; background: #f4f4f4; border: .6px solid #c4c4c4;
+  padding: .35em .55em; margin: .4em 0;
+  /* 第七十六輪：舊作 pre-wrap ＋ break-all，遂令「僧伽」二字跨頁鋸成兩半、框線圖散架。
+     今不拆詞（keep-all）、唯遇空白方得換行；字級另由 build38.fit_pre_blocks 依每段最長
+     顯示寬自動縮入版寬，故實務上不須換行。 */
+  white-space: pre-wrap; word-break: keep-all; overflow-wrap: normal; line-break: strict;
+  page-break-inside: auto; orphans: 2; widows: 2;
+}
+/* 高度可容一頁者由 build38 加 class="keep"：整圖不跨頁；長圖仍准按行界斷頁 */
+pre.keep { break-inside: avoid; page-break-inside: avoid; }
+
+/* mermaid 圖（第 244 輪·由 build38.inline_mermaid() 就地嵌入之 SVG）：
+   非等寬字符畫，故去 pre 之灰底框線；整體禁跨頁（SVG 斷不了的），並水平置中。 */
+.mmdfig { break-inside: avoid; page-break-inside: avoid; background: #fff;
+          margin: .5em auto; text-align: center; }
+.mmdfig svg { display: block; margin: 0 auto; }
+/* 行內 `代稱` 於紙上不宜作軟體介面觀：舊製以等寬字型加灰底方框（Consolas 無漢字，
+   遂致中英混排、印面如貼程式標籤）。今一律隨正文字型、去底去框去內距；
+   `pre` 內之真實代碼仍由下條還原。 */
+code { font-family: inherit; font-size: 100%; }
+p code, li code, td code, th code {
+  background: none; border: none; border-radius: 0; padding: 0;
+}
+pre code { background: none; border: none; padding: 0; }
+
+/* 第 143 輪：篇首標題（h3）與其下判例標題（h4）之間隔一 `<hr />`，故 `h3 + *` 之
+   break-before:avoid 只及於 hr 而管不到 h4——精簡本遂兩處以標題收頁（`_work/widow.py` 逮）。
+   令 hr 亦不得收頁，標題與其後首塊方相隨不離。 */
+hr { border: none; border-top: 1px solid #c9c9c9; margin: .8em 0;
+     break-after: avoid; page-break-after: avoid; }
+a { color: #111; text-decoration: none; }
+
+/* ══════════════════════════════════════════════════════════════════
+   參、跑版防護（承 ver25）
+   ══════════════════════════════════════════════════════════════════ */
+h2, h3, h4 { break-inside: avoid; }
+h1, h2, h3, h4, h5, h6 { word-break: normal; overflow-wrap: break-word; }
+p, li, td, th, blockquote p, dd, dt { overflow-wrap: break-word; }
+ul, ol { list-style-position: outside; margin-left: 1.6em; padding-left: .6em; }
+/* 第七十六輪：li 舊禁跨頁，於是超長列表項（如第八章行動卡）之溢出文字被整塊甩到
+   後頁頁底（p.237→238 之「文字串接跑版」）。今准其跨頁，小標由 h* 之 break-after: avoid 守住。 */
+li { break-inside: auto; }
+
+/* ══════════════════════════════════════════════════════════════════
+   肆、目錄（點線引導式）
+   ── 關鍵：整行統一 CJK 字型，不可混用 Consolas ──
+    字寬隨字級等比縮放（舊 10.3pt 時全形 13.25pt；現 12.5pt，格數見 build38.TOC_GRID）。
+   若把點線換成等寬字型，字寬比失真，點線將溢出右邊界並吃掉頁碼。
+   故點線用同一 CJK 字型的「.」生成，點距＝W_DOT。
+   ══════════════════════════════════════════════════════════════════ */
+.toc-lead {
+  margin: 0 0 .4em;
+  page: toc;
+  break-before: page;
+}
+.toc-lead h2 {
+  background: none; border-left: none; border-bottom: 2.2px solid #1c1c1c;
+  text-align: center; font-size: 19pt; letter-spacing: .34em;
+  padding: 0 0 .4em; margin: 0 0 .6em; text-indent: .34em;
+}
+.toc-line {
+  font-family: "Microsoft JhengHei", "微軟正黑體", "MingLiU", sans-serif;
+  font-size: 12.5pt; line-height: 1.42; margin: 0;
+  white-space: nowrap; overflow: hidden; text-align: left;
+}
+.toc-line .d { color: #a2a2a2; }
+.toc-line .pg { font-variant-numeric: tabular-nums; color: #111; }
+.toc-l1 { margin-top: .25em; }
+.toc-l1 .t { font-weight: 700; font-size: 13.4pt; }
+.toc-l2 .t { font-size: 12.4pt; }
+.toc-l2 { padding-left: 1.5em; }
+.toc-l3 .t { font-size: 12.0pt; color: #333; }
+.toc-l3 { padding-left: 3.0em; }
+
+/* 各章（H1）一律另起新頁；附錄亦同（原 appendix-start 規則已併入通則，留存備查） */
+h1.appendix-start { break-before: page; }
+
+/* 案號不可折行（第 105 輪）：由 build38.nowrap_case_ids 掛載，根治總表編號欄折成兩行 */
+.nb { white-space: nowrap; }
+
+/* 第 132 輪：拉丁詞含變音符者整詞改由拉丁字型排（含粗體），免逐字 fallback 致字距參差 */
+.pali { font-family: "Times New Roman", "Segoe UI", "Microsoft JhengHei", serif; }

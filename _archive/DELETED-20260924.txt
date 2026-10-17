@@ -1,0 +1,31 @@
+第 110 輪清蕩（2026-09-24）：
+  留檔數 77
+  已除 b110.log
+  已除 fix_p13.png
+  已除 peek_p8.png
+  已除 peek_p31.png
+  已除 peek_p252.png
+  已除 pg13.png
+  已除 pg14.png
+  已除 t110.py
+  已除 t110.txt
+  已除 t110b.py
+  已除 t110b.txt
+  已除 t110c.py
+  已除 t110c.txt
+  已除 t110d.txt
+  已除 t110e.py
+  已除 t110e.txt
+  已除 t110f.py
+  已除 t110g.txt
+  已除 t110h.txt
+  已除 t110i.py
+  已除 t110j.py
+第 111 輪清蕩（2026-09-24）：一次性探針與出圖 4 檔
+  已除 p111.py
+  已除 p111b.py
+  已除 peek_p11.png
+  已除 peek_p31.png
+  留檔：tblaudit.py（五軸）、palichk.py（外文名相）、peekpage.py、tblgrid.py、negtest_tblgrid.py
+  _work 現 10
+  更正：前條『_work 現 10』乃誤數根目錄，_work 實 73 檔

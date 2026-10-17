@@ -1,0 +1,339 @@
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-23 08:29）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）42 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r41_axes.py r77_fix.py round84_pre.md round88_pre.md rows2.py selfcount72.py simp61.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）18 項
+  _work/appxtag89.txt
+  _work/jp74.txt
+  _work/r90ins.py
+  _work/spd.txt
+  _work/v89bare.py
+  _work/v89bare2.py
+  _work/v89bare2.txt
+  _work/v89slim.txt
+  _work/v89slimbare.txt
+  _work/v89tag.py
+  _work/v89verify.txt
+  _work/v89verify2.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+
+ freed 0.0 MB
+
+## 【事後重建】首輪清蕩所刪（第 89 輪 · 133→47 之那一次）104 項
+（說明：`clean89.py` 舊採覆寫式憑據，同一日二次 --go 蓋去首輪明細；
+ 本段依清蕩前之目錄實況單與今存檔單相減重建，非工具當時自報。工具已改為累加。）
+  _work/_probe_fit.html
+  _work/_probe_fit.pdf
+  _work/build38_pre83.py
+  _work/c85.txt
+  _work/clean82.txt
+  _work/e84.txt
+  _work/e84a.txt
+  _work/e84b.txt
+  _work/e84c.txt
+  _work/e84cl.txt
+  _work/e84d.txt
+  _work/f84.txt
+  _work/f84c.txt
+  _work/f85b.txt
+  _work/f86.txt
+  _work/f86d.txt
+  _work/f86e.txt
+  _work/f87.txt
+  _work/matrix81.txt
+  _work/preprobe.txt
+  _work/prewidth.txt
+  _work/print38_pre85.css
+  _work/r82sop.py
+  _work/r83log.py
+  _work/r83pandoc.py
+  _work/r84a.py
+  _work/r84a.txt
+  _work/r84b.py
+  _work/r84b.txt
+  _work/r85a.py
+  _work/r85a.txt
+  _work/r85b.py
+  _work/r85cover.py
+  _work/r85probe.txt
+  _work/r86a.py
+  _work/r86a.txt
+  _work/r86b.py
+  _work/r86b.txt
+  _work/r86c.txt
+  _work/r86ctx.txt
+  _work/r86d.txt
+  _work/r86probe.txt
+  _work/r87a.py
+  _work/r87a.txt
+  _work/r87probe.txt
+  _work/r88b.py
+  _work/r88b.txt
+  _work/r88c.py
+  _work/r88c.txt
+  _work/r88d.py
+  _work/r88e.py
+  _work/r88f.txt
+  _work/r88g.py
+  _work/r88probe.txt
+  _work/r89b.py
+  _work/r89c.py
+  _work/r89d.py
+  _work/r89e.py
+  _work/r89fix.py
+  _work/r89h.py
+  _work/r89probe.txt
+  _work/round81_pre.md
+  _work/round81b_pre.md
+  _work/round81c_pre.md
+  _work/round81d_pre.md
+  _work/round82_pre.md
+  _work/round83_pre.md
+  _work/round85_pre.md
+  _work/round86_pre.md
+  _work/round86b_pre.md
+  _work/round87_pre.md
+  _work/sc72.txt
+  _work/sc72f.txt
+  _work/selfcount.txt
+  _work/summary.txt
+  _work/sweep67c.py
+  _work/t83probe.py
+  _work/t84ctx.py
+  _work/t84dig.py
+  _work/t84scan.py
+  _work/t85probe.py
+  _work/t86c.py
+  _work/t86ctx.py
+  _work/t86probe.py
+  _work/t87probe.py
+  _work/two.txt
+  _work/v83.txt
+  _work/v84.txt
+  _work/v84b.txt
+  _work/v84c.txt
+  _work/v84d.txt
+  _work/v85.txt
+  _work/v85b.txt
+  _work/v85c.txt
+  _work/v86.txt
+  _work/v86d.txt
+  _work/v86e.txt
+  _work/v87.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+  _work/vpre.txt
+（今存 43 檔）
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-23 21:29）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）44 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r41_axes.py r77_fix.py r91probe.py round84_pre.md round88_pre.md rows2.py selfcount72.py simp61.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）7 項
+  _work/round92_pre.md
+  _work/summary.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+
+ freed 1.6 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 05:29）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）58 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）49 項
+  _work/appxtag89.txt
+  _work/duphead.txt
+  _work/echo89.txt
+  _work/freq88.txt
+  _work/h4seq.txt
+  _work/r94b.txt
+  _work/r94c.py
+  _work/r94c.txt
+  _work/r94ins.py
+  _work/r94probe.txt
+  _work/r95.py
+  _work/r95.txt
+  _work/r96.py
+  _work/r96.txt
+  _work/r96ins.py
+  _work/r97.py
+  _work/r97.txt
+  _work/r98d.txt
+  _work/r98e.txt
+  _work/r98f.txt
+  _work/r99.py
+  _work/r99.txt
+  _work/r99b.py
+  _work/r99c.py
+  _work/r99e.py
+  _work/r99e.txt
+  _work/r99f.py
+  _work/r99g.txt
+  _work/r99i.py
+  _work/r99j.py
+  _work/r99l.py
+  _work/round84_pre.md
+  _work/round88_pre.md
+  _work/round93_pre.md
+  _work/round94_pre.md
+  _work/round95_pre.md
+  _work/round96_pre.md
+  _work/simpgap.py
+  _work/sopfix.py
+  _work/sopfix2.py
+  _work/summary.txt
+  _work/sweep66.txt
+  _work/v94.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+
+ freed 9.5 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 06:41）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）64 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r100c.py r100d.py r100e.py r100f.py r101b.py r101c.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）21 項
+  _work/add2chk.py
+  _work/addf3chk.py
+  _work/addzlchk.py
+  _work/fixchk.py
+  _work/fixchk2.py
+  _work/freq88.txt
+  _work/r100b.py
+  _work/r100g.py
+  _work/r100h.py
+  _work/r100ins.py
+  _work/r100probe.py
+  _work/r101.py
+  _work/r101ins.py
+  _work/r102.py
+  _work/summary.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+
+ freed 0.0 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 07:01）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）65 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r100c.py r100d.py r100e.py r100f.py r101b.py r101c.py r102d.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）27 項
+  _work/appxd74.txt
+  _work/band.txt
+  _work/dom.txt
+  _work/duphead.txt
+  _work/freq88.txt
+  _work/jp74.txt
+  _work/mdlint.txt
+  _work/neg2.txt
+  _work/other_vol.txt
+  _work/r102b.py
+  _work/r102c.py
+  _work/r103.py
+  _work/r103b.py
+  _work/r103c.py
+  _work/r103ins.py
+  _work/selfcount.txt
+  _work/summary.txt
+  _work/tiao4.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+  _work/volchk2.txt
+  _work/xschk.txt
+  _work/zhengli72.txt
+
+ freed 0.0 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 07:16）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）67 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r100c.py r100d.py r100e.py r100f.py r101b.py r101c.py r102d.py r104.py r104b.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）11 項
+  _work/r104c.py
+  _work/r104d.py
+  _work/r104e.py
+  _work/r104ins.py
+  _work/summary.txt
+  _work/tiao4.txt
+  _work/verify_bq.txt
+  _work/verify_bqa.txt
+  _work/verify_c6.txt
+  _work/verify_e.txt
+  _work/verify_f.txt
+
+ freed 0.0 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 09:19）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）67 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r100c.py r100d.py r100e.py r100f.py r101b.py r101c.py r102d.py r104.py r104b.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）14 項
+  _work/addsubgrp.py
+  _work/appxtag89.txt
+  _work/e105.txt
+  _work/pipe105.py
+  _work/pipe105.txt
+  _work/pipe105b.py
+  _work/pipe105c.py
+  _work/r105.py
+  _work/r105b.py
+  _work/r105c.py
+  _work/r105d.py
+  _work/r105e.py
+  _work/r105ins.py
+  _work/round105_pre.md
+
+ freed 1.6 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 09:33）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）69 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py data.txt domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r100c.py r100d.py r100e.py r100f.py r101b.py r101c.py r102d.py r104.py r104b.py r108.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）5 項
+  _work/e106.txt
+  _work/e107.txt
+  _work/e108.txt
+  _work/r106.py
+  _work/r107.py
+
+ freed 0.0 MB
+
+# 清除憑據（第 89 輪工作檔之清蕩 · 2026-09-24 10:53）
+
+## 保留（書中或管線點名、可重跑之軸、本批回滾點）72 項
+  appxd74b.py appxtag89.py bandsweep.py check.txt clean82.py clean89.py data.txt domchk.py duphead.py echo89.py foyan.py freq88.py h4seq.py jp74c.py ledger.py mdlint.py motif89.py n6live.py negchk2.py odd61.py order.txt othervol.py p2probe.py patch_dedup2.json phrase89.py r100c.py r100d.py r100e.py r100f.py r101b.py r101c.py r102d.py r104.py r104b.py r108.py r109check.py r41_axes.py r77_fix.py r91probe.py r94b.py r94probe.py r98b.py r98c.py r98d.py r98e.py r98f.py r98g.py r98h.py r98i.py r98probe.py r99d.py r99g.py r99h.py r99k.py rows2.py selfcount72.py simp61.py simpgap2.py spdprobe.py survey77.py sweep66.py sweep67.py sweep67b.py t109.py t109b.py t83pre.py tiao4.py tiaochk2.py vocabchk.py volsweep2.py xschk.py zhengli72b.py
+
+## 刪除（一輪性腳本與其輸出；結案之實已載附錄M）2 項
+  _work/e109.txt
+  _work/print38.css.bak105
+
+ freed 0.0 MB
