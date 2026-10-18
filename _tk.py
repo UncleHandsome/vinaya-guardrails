@@ -15,7 +15,8 @@ if hasattr(sys.stdout, 'reconfigure'):
 ROOT = os.path.dirname(os.path.abspath(__file__))
 WORK = os.path.join(ROOT, '_work')
 os.makedirs(WORK, exist_ok=True)
-_CANDS = [q for q in glob.glob(os.path.join(ROOT, 'ver[0-9]*.md'))
+_CANDS = [q for q in glob.glob(os.path.join(ROOT, 'ver[0-9]*.md')) + glob.glob(
+              os.path.join(ROOT, '_archive', u'\u820a\u672c', 'ver[0-9]*.md'))     # 舊本層（舊＝U+820A）
           if u'\u5217\u5370' not in os.path.basename(q) and re.search(r'^ver\d+', os.path.basename(q))]
 SRC = os.environ.get('TKSRC') or (
     max(_CANDS, key=lambda q: int(re.match(r'ver(\d+)', os.path.basename(q)).group(1))) if _CANDS else None)

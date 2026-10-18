@@ -6,7 +6,8 @@
     之敗在路徑層。故立此尺，四檢俱硬：
   甲 工具檔（_work/_print 之 .py）字串面值中，指向本書之絕對路徑 → 須 0
   乙 工具檔任何一行不再出現舊鏡射之代號 → 須 0
-  丙 HP.SRC 須落在工作資料夾根，且根目錄恰有此檔一支
+  丙 HP.SRC 須存在，且其所在層須為工作資料夾根或 `_archive/舊本`（2026-10-18 奉令：兩本舊本移出正本層，
+     唯仍作合編之素材與逐字校據，故舊尺照跑），且該層恰有此檔一支
   丁 桌面他處之同名檔：與正本全等、或改動時間不早於正本者 → 須 0（此二類皆『兩份正本』之形；
     明顯較舊之殘稿只軟報列出，不判死——殘稿在作者自己目錄內，刪否非尺所裁）
 退出碼：任一不合格 1。
@@ -56,12 +57,15 @@ for fp in live_tools():
                 fails.append(u"甲 %s:%d 硬編正文檔路徑 → %s" % (rel, i, l.strip()[:70]))
 print(u"甲 硬編路徑 %d 處｜乙 舊徑殘留 %d 處｜工具檔 %d 支" % (n_a, n_b, n_files))
 
-ok_c = os.path.dirname(HP.SRC) == ROOT and os.path.isfile(HP.SRC)
-root_hits = [f for f in os.listdir(ROOT)
-             if f.startswith(PREFIX) and f.endswith(".txt")]
-if not ok_c or len(root_hits) != 1:
-    fails.append(u"丙 HP.SRC 不在工作資料夾根，或根目錄不止一支：%s" % root_hits)
-print(u"丙 HP.SRC＝根目錄之唯一正本：%s（根目錄 %d 支）" % (ok_c, len(root_hits)))
+BASES = [ROOT, os.path.join(ROOT, "_archive", u"舊本")]   # 舊 = U+820A（勿誤寫 U+8208「興」）
+src_dir = os.path.dirname(HP.SRC) if HP.SRC else None
+ok_c = bool(src_dir) and os.path.isfile(HP.SRC) and src_dir in BASES
+layer_hits = [f for f in os.listdir(src_dir)] if src_dir and os.path.isdir(src_dir) else []
+layer_hits = [f for f in layer_hits if f.startswith(PREFIX) and f.endswith(".txt")]
+if not ok_c or len(layer_hits) != 1:
+    fails.append(u"丙 HP.SRC 所在層非根目錄亦非 `_archive/舊本`，或該層不止一支：%s" % layer_hits)
+print(u"丙 HP.SRC＝該層之唯一 護欄 檔：%s（所在層 %s・該層 %d 支）"
+      % (ok_c and len(layer_hits) == 1, os.path.relpath(src_dir or ".", ROOT), len(layer_hits)))
 
 n_d = 0
 n_soft = 0

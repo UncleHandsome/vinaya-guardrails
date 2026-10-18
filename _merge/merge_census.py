@@ -10,8 +10,19 @@ from collections import Counter
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VN = "ver38" + "".join(map(chr, (0x56DB, 0x5206, 0x5F8B))) + "_"  # ver38四分律_
-V = glob.glob(os.path.join(ROOT, "ver38*.md"))[0]
-H = glob.glob(os.path.join(ROOT, "".join(map(chr, (0x4F5B, 0x9640, 0x7684, 0x8B77, 0x6B04))) + "*.txt"))[0]
+_LAYERS = [ROOT, os.path.join(ROOT, "_archive", u"舊本")]
+
+
+def _find(pat):
+    for b in _LAYERS:
+        g = sorted(glob.glob(os.path.join(b, pat)))
+        if g:
+            return g[0]
+    raise SystemExit("找不到 %s（搜過：%s）" % (pat, _LAYERS))
+
+
+V = _find("ver38*.md")
+H = _find("".join(map(chr, (0x4F5B, 0x9640, 0x7684, 0x8B77, 0x6B04))) + "*.txt")
 ATT = glob.glob(os.path.expanduser(r"~\.qoder\tmp\*\attachments\*\*.txt"))
 
 vtxt = open(V, encoding="utf-8").read()

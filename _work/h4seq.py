@@ -4,12 +4,13 @@
 產出：① 每一 H3 節內 H4 之序數列；② 缺號、重號、倒序、跳號者列出待人工斷。
 """
 import io, os, re, sys
+import os as _hp_os, sys as _hp_sys; _hp_sys.path.insert(0, _hp_os.path.dirname(_hp_os.path.dirname(_hp_os.path.abspath(__file__)))); import hulan_path as HP  # hulan-path
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-DOC = open(os.path.join(ROOT, u'ver38四分律_起心動念心智分析框架_修正版.md'), encoding='utf-8').read()
-if len(sys.argv) > 1:                      # 負測用：植病之副本可另路注入，主檔路徑為預設
-    DOC = open(sys.argv[1], encoding='utf-8').read()
+# 本尺列於護欄跑批（hlbattery RULERS），故預設讀護欄正本；要掃他冊仍以 argv 注入。
+# （旧版預設硬編 ver38 檔名——在護欄跑批中實為跑錯冊，2026-10-18 清場時察得並正之。）
+DOC = open(sys.argv[1] if len(sys.argv) > 1 else HP.SRC, encoding='utf-8').read()
 LINES = DOC.split('\n')
 
 CN = u'一二三四五六七八九十'
