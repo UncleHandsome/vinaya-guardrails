@@ -26,6 +26,19 @@ def cnum(s):
     return tens * 10 + CN.get(b, 0)
 
 
+def cn_num(n):
+    """整數轉漢語序數：1→一、10→十、11→十一、21→二十一。"""
+    d = u"零一二三四五六七八九"
+    if n < 10:
+        return d[n]
+    if n == 10:
+        return u"十"
+    if n < 20:
+        return u"十" + (d[n % 10] if n % 10 else u"")
+    a, b = divmod(n, 10)
+    return d[a] + u"十" + (d[b] if b else u"")
+
+
 def chapter_blocks(text):
     """以「# 第N章　」為界，返 {章號: 該章全文}。"""
     lines = text.split("\n")
@@ -70,6 +83,43 @@ def no_fanli(lines):
     """去掉凡例段之册身（計帳之用）。查無凡例則原樣返（由尺另報其缺）。"""
     sp = fanli_span(lines)
     return "\n".join(lines if not sp else lines[:sp[0]] + lines[sp[1]:])
+
+def section_titles(block):
+    """該章之『裸序數節層』標題（護欄冊之制：『### 一、…』），返 [(序, 原標題行)]。"""
+    out = []
+    for m in re.finditer(r"^### ([一二三四五六七八九十]+)、(.*)$", block, re.M):
+        out.append((cnum(m.group(1)), u"%s、%s" % (m.group(1), m.group(2).strip())))
+    return out
+
+
+def has_explicit_sections(block):
+    return bool(re.search(r"^#{2,6} 第[一二三四五六七八九十]+節", block, re.M))
+
+
+def resolve_by_ordinal(text):
+    """節級死鏈中『所指唯一』者，改為以標題為鑰之活鏈：「第N章第M節」→「第N章『M、其題』」。
+
+    准許之條件（缺一即不猜，留〔指針待判〕）：該章全無「第K節」式標題（裸序數乃其唯一節層），
+    且第 M 個裸序數標題確在其內。護欄冊自指其章之「第M節」全屬此類——它向來以『第N節』稱其
+    「### N、」小節，合編後章號已改而節層未易形，故按序取名即其所指，非強猜。
+    """
+    blocks = chapter_blocks(text)
+    n = [0]
+
+    def one(m):
+        tg = blocks.get(cnum(m.group(2)))
+        if not tg or has_explicit_sections(tg):
+            return m.group(0)
+        ts = section_titles(tg)
+        want = cnum(re.match(r"第(.+)節", m.group(3)).group(1))
+        hit = next((t for k, t in ts if k == want), None)
+        if not hit:
+            return m.group(0)
+        n[0] += 1
+        return u"%s『%s』" % (m.group(1), hit)
+
+    return REF.sub(one, text), n[0]
+
 
 def tag_dead(text):
     """凡節級死鏈就地掛〔指針待判〕，返 (新文, 掛標數)。"""

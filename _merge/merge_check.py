@@ -144,6 +144,20 @@ p("死鏈逐種清單（候裁，×次）", "、".join("%s×%d" % (k, v) for k, 
 p("戒本表舊指針（書中：第X章案例Y）", len(re.findall(u"書中：第[一二三四五六七八九十]+章案例", b)))
 p("素材卡標（應 164）", len(re.findall(u"^#### 〔素材・護欄", b, re.M)))
 p("指針已重算待復核之標", b.count(u"〔指針已重算・待復核〕"))
+gap = []
+for n in sorted(sec):
+    ks = [RN.cnum(x) for x in re.findall(r"^#{2,6} 第([一二三四五六七八九十]+)節", sec[n], re.M)]
+    if ks and ks != list(range(1, len(ks) + 1)):
+        gap.append((u"第%s章" % n, ks))
+p("節序連貫（每章須自第一節起而無跳號）", "28 章俱連貫" if not gap else "★跳號／缺首 %d 章：%s" % (
+    len(gap), u"、".join("%s%s" % g for g in gap)))
+if gap:
+    fails.append("節序不連貫 %d 章" % len(gap))
+dbg = len(re.findall(u"（另見第[一二三四五六七八九十]+章）", b))
+til = b.count(u"～")
+p("除錯語法指針『（另見第N章）』（須 0）", dbg)
+if dbg:
+    fails.append("印面殘除錯語法指針 %d 处" % dbg)
 if badref:
     fails.append("章級死鏈 %d 種" % len(set(badref)))
 if untagged:
@@ -285,6 +299,12 @@ vf(u"二", u"素材卡 164・補遺十五則為卡題（不充百則之母數）
    len(re.findall(r"^#### 〔素材・護欄", b, re.M)) == 164 and BUYI == 15, u"164・補遺卡 %d" % BUYI)
 vf(u"三", u"判別句定於一條（『必是一句律文，不是一個名字』）", fx.count(u"必是一句律文，不是一個名字") == 1,
    u"%d 見" % fx.count(u"必是一句律文，不是一個名字"))
+NQ = re.sub(u"[「『][^」』]*[」』]", u"", b)
+viol = [k for k in (u"頻婆娑羅", u"優填王", u"目犍連", u"給孤獨長者")
+        if any(k in l for l in NQ.split("\n")
+               if not re.search(u"通行名|通行譯|舊譯|^\\s*\\||對照", l))]
+vf(u"三", u"正名令行於敘述文字（引號外・非對照列不得現通行名）", not viol,
+   u"違規：%s" % (u"、".join(viol) if viol else u"無"))
 # 升格卡區內不得有 ◈（凡例四宣稱未加注）；框架卡區須有 ◎（宣稱隨帶入）
 in_card, cwr, kwr = False, 0, 0
 for l in L:

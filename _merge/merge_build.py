@@ -224,11 +224,11 @@ def _map_ch(num, sec, src):
             return sp[1]
         if not sec:
             relink_stat[u"存疑未改"] += 1
-            return sp[0] + u"（另見%s）" % sp[1]
+            return CM.pair(sp[0], sp[1])              # 『第十九、二十章』——絕不用除錯語法
         return sp[0]
     if key not in m:
         return None
-    if u"～" in m[key]:
+    if u"～" in m[key] or u"、" in m[key]:
         relink_stat[u"多章待裁"] += 1
     return m[key]
 
@@ -357,7 +357,9 @@ FANLI = [
   u"今語概括，節引必標刪節號，戒文與制戒因緣分離，宗派名相必標宗派，「本律」專指大正藏 No.1428《四分律》六十卷正文及 "
   u"No.1429《戒本》。自護欄帶入者，全依護欄【凡例】四例：引號與粗體相合之文必是律文原句；未加粗體之引號或為術語標注、"
   u"或為今語敘事，不作逐字之宣稱；署名而標『義引』『大意』『義譯』『括旨』者，出其書之旨非其書之句。"
-  u"**兩制之判別句本冊定為一條：要作逐字宣稱的，其文讀出來必是一句律文，不是一個名字。**"),
+  u"**兩制之判別句本冊定為一條：要作逐字宣稱的，其文讀出來必是一句律文，不是一個名字。**"
+  u"又框架【全書凡例】第三條之**正名令**，本冊行於兩冊帶入之敘述文字（瓶沙・憂陀延・目連・給孤獨食）；"
+  u"引號內如實舊形不較，凡例與術語對照表所列『通行名』對照亦不較——動之則自毀其例。"),
  (u"四・三層標記之推行範圍（如實現量）",
   u"◎原典／〔◈宗派〕〔名相〕之三層標記，**框架側之舊制隨卡全數帶入；護欄一百六十四案原無此制，本冊未強行加注**。"
   u"為諸案逐條判層加注與否，屬第七節第十六條之候裁，裁前不施行——此條只如實登現況，不容讀作「已推行」。"),
@@ -661,10 +663,11 @@ w(demote(relink(strip_h1("\n".join(vlines[V_APX[u"終卷"][0] - 1:V_APX[u"終卷
 book = "\n".join(x for x in O if x != u"")
 book = re.sub(r"\n{4,}", "\n\n\n", book)
 def tag_dead_refs(text):
-    """冊成之後之一掃：凡「第N章第M節」而該章實無此節者，就地掛〔指針待判〕——
-    不靜態留舊號（跨冊指涉本有兩義，強猜即錯），亦不留死鏈於無形。"""
+    """冊成之後之一掃：先解『所指唯一』之節級死鏈（裸序數節層者改寫為以標題為鑰），
+    其餘無從強猜者就地掛〔指針待判〕——不靜態留舊號，亦不留死鏈於無形。"""
+    text, n_res = RN.resolve_by_ordinal(text)
     out, n = RN.tag_dead(text)
-    print("指針待判：%d 條已就地標出（跨冊兩義者，須逐條裁）" % n)
+    print("節級指針：以序解題而活 %d 條｜無從強猜而掛〔指針待判〕 %d 條" % (n_res, n))
     return out
 
 
@@ -710,7 +713,132 @@ def mark_old_toc(text):
     return re.sub(u"^#{3,4} [^\\n]*目錄】$", lambda m: one(m), text, flags=re.M), n[0]
 
 
+def renumber_sections(text):
+    """拆章之後重編節序：第十九章之六・七節改五・六（原第五節已抽出成第二十章），
+    第二十章之第五節改第一節。標題與指針**同步**改，圍欄內與 `> ` 逐字引文不動。"""
+    lines = text.split("\n")
+    cur, nh = None, 0
+    for i, l in enumerate(lines):
+        m = re.match(r"^# (第[一二三四五六七八九十]+章)　", l)
+        if m:
+            cur = m.group(1)
+            continue
+        mp = CM.SEC_RENUM.get(cur or u"")
+        if mp and l.startswith("#"):
+            m2 = re.match(r"^#{2,6} (第[一二三四五六七八九十]+節)", l)
+            if m2 and m2.group(1) in mp:
+                lines[i] = l.replace(m2.group(1), mp[m2.group(1)], 1)
+                nh += 1
+    out, fence = [], False
+    for l in lines:
+        if l.startswith("```"):
+            fence = not fence
+            out.append(l)
+            continue
+        if fence or l.startswith(u"> "):
+            out.append(l)
+            continue
+
+        def one(mo):
+            mp = CM.SEC_RENUM.get(mo.group(1))
+            return mo.group(1) + mp[mo.group(2)] if (mp and mo.group(2) in mp) else mo.group(0)
+
+        out.append(re.sub(u"(第[一二三四五六七八九十]+章)(第[一二三四五六七八九十]+節)", one, l))
+    nr = nh and sum(1 for a, b in zip(lines, out) if a != b) - nh
+    print("節序重編：標題 %d 处・指針隨動約 %d 行（十九／二十章拆章之後不使節號跳空缺首）" % (nh, max(nr, 0)))
+    return fix_section_sequence("\n".join(out))
+
+
+D_CN = u"零一二三四五六七八九十"
+
+
+def cn_num(n):
+    d = D_CN
+    if n < 10:
+        return d[n]
+    if n == 10:
+        return u"十"
+    if n < 20:
+        return u"十" + d[n % 10]
+    return d[n // 10] + u"十" + (d[n % 10] if n % 10 else u"")
+
+
+def fix_section_sequence(text):
+    """每章之節序須自『第一節』起且連貫——兩源同章各帶一套者（如第二十八章之結語與尾聲），
+    後一套就地道續號。此為『尺之約、器自守』：不靠人記，改塊即自動續排。"""
+    lines = text.split("\n")
+    cur, seen, moved = None, {}, 0
+    for i, l in enumerate(lines):
+        m = re.match(r"^# (第[一二三四五六七八九十]+章)　", l)
+        if m:
+            cur, seen = m.group(1), {}
+            continue
+        if not cur:
+            continue
+        m2 = re.match(r"^(#{2,6} )第([一二三四五六七八九十]+)節(.*$)", l)
+        if not m2:
+            continue
+        want = seen.get(u"ord", 0) + 1
+        got = RN.cnum(m2.group(2))
+        seen[u"ord"] = want
+        if got != want:
+            lines[i] = u"%s第%s節%s" % (m2.group(1), cn_num(want), m2.group(3))
+            moved += 1
+    if moved:
+        print("節序就地續號：%d 处（兩源同章各帶一套節號者，後一套改接其後）" % moved)
+    return "\n".join(lines)
+
+
+NAMES = CM.NAMES                                       # 正名對照之法源在 chapmap（尺亦取之）
+GLOSS = re.compile(u"通行名|通行譯|舊譯|^\\s*\\||對照|跳號")
+
+
+def fix_proper_names(text):
+    """框架凡例第三條之正名令，行於兩冊帶入之**敘述文字**：引號內如實舊形不較，
+    凡例與術語對照表之『通行名』對列不較（動之則自毀其例）。"""
+    out, n = [], 0
+    for l in text.split("\n"):
+        if GLOSS.search(l):
+            out.append(l)
+            continue
+        line, hits = l, 0
+        for bad, good in NAMES:
+            if bad in line:
+                pre, cnt = sub_outside_quotes(line, bad, good)
+                line, hits = pre, hits + cnt
+        if hits:
+            n += hits
+        out.append(line)
+    print("正名令（引號外・非對照列）：改 %d 处" % n)
+    return "\n".join(out)
+
+
+QSPAN = re.compile(u"[「『][^」』]*[」』]")
+
+
+def sub_outside_quotes(line, bad, good):
+    """只在引號外替——引號內乃逐字舊形，如實登載（框架引文承諾六律之域）。"""
+    spans = [(m.start(), m.end()) for m in QSPAN.finditer(line)]
+    cnt, res, last = 0, [], 0
+    i = 0
+    while True:
+        j = line.find(bad, i)
+        if j < 0:
+            break
+        if any(a <= j < b for a, b in spans):
+            res.append(line[last:j + len(bad)])
+        else:
+            res.append(line[last:j] + good)
+            cnt += 1
+        last, i = j + len(bad), j + len(bad)
+        i = j + len(bad)
+    res.append(line[last:])
+    return u"".join(res), cnt
+
+
 book = normalize_h1(book)
+book = fix_proper_names(book)
+book = renumber_sections(book)
 book = add_toc(book)
 book, OLD_TOC = mark_old_toc(book)
 book = tag_dead_refs(book)
