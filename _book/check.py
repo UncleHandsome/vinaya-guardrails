@@ -44,7 +44,7 @@ for k, (i, t) in enumerate(H1):
     m = re.match(u"(第[一二三四五六七八九十]+章)　(.*)$", t)
     if m:
         CHAP[m.group(1)] = (i, H1P[k + 1] - 1, m.group(2))
-fan_i = next((k for k, l in enumerate(BL, 1) if l.startswith(u"## 【卷首・本冊凡例】")), 0)
+fan_i = next((n for n, l in enumerate(BL, 1) if l.startswith(u"## 【卷首・") and u"凡例】" in l), 0)
 fan_j = next((k for k, l in enumerate(BL[fan_i:], fan_i + 1) if l.startswith(u"## ")), len(BL)) if fan_i else 0
 CORE = u"\n".join(BL[:fan_i - 1] + BL[fan_j - 1:]) if fan_i else book
 BN = norm(book)
@@ -66,8 +66,8 @@ if len(apxs) != 5:
     bad(u"附錄數 %d ≠ 5" % len(apxs))
 if not [l for l in BL if l.startswith(u"# 終卷")]:
     bad(u"終卷佚")
-for f in [u"【題詞與獻辭】", u"【自序】", u"【導讀指南】", u"【卷首・本冊凡例】", u"【全書路標】",
-          u"【開卷總提撕】", u"【本冊總目錄】", u"【三篇立言之總意】", u"【本冊之斷】"]:
+for f in [u"【題詞與獻辭】", u"【自序】", u"【導讀指南】", u"凡例】", u"【全書路標】",
+          u"【開卷總提撕】", u"總目錄】", u"【三篇立言之總意】", u"【本書之斷】", u"引文承諾六律"]:
     if not any(l.startswith(u"#") and f in l for l in BL):
         bad(u"卷首・斷語件佚：%s" % f)
 short = []
@@ -217,7 +217,8 @@ else:
 
 # ── 七・素材涵蓋率（逐段回查兩本舊冊）──────────────────────────────────────
 EXC = [u"三十格", u"林下留白", u"空白格", u"留白觀", u"章末收卷", u"全章收卷", u"公堂燈熄",
-       u"吃茶", u"松風", u"樹下吹風", u"章末引橋", u"把法袍留在門外", u"引橋", u"走出解剖室",
+       u"吃茶", u"松風", u"樹下吹風", u"章末引橋", u"把法袍留在門外", u"核心引橋",
+       u"引橋：手握總帳", u"走出解剖室",
        u"檢索", u"速查", u"綁定台帳", u"台帳", u"全覽表", u"複統攝", u"終極壓縮", u"心智生態系統全貌",
        u"附錄收編", u"開卷標準目錄", u"全書詳細目錄", u"卷首導讀", u"挫折慢心療法", u"核心命題錨定",
        u"三層標記", u"人機協同", u"自然人心證自律宣告書", u"道岔", u"目錄",
@@ -266,28 +267,21 @@ def lost_in(lines, a, b):
     return out
 
 
-def census(lines, tag, lvl=3):
+def census(lines, tag):
+    """以『葉節』為單位，且祖先標題命中排除表者連帶不計（H2・卷首・附錄皆不漏量）。"""
     hs = heads(lines)
-    marks = [(i, t) for i, l2, t in hs if l2 == lvl]
-    shallower = sorted(set([i for i, l2, t in hs if l2 <= lvl] + [len(lines) + 1]))
+    starts = [i for i, l2, t in hs if 2 <= l2 <= 5]
+    nxt = sorted(set([i for i, l2, t in hs if l2 <= 5] + [len(lines) + 1]))
     miss = collections.OrderedDict()
-    for i, t in marks:
-        if any(x in t for x in EXC):
+    for i in starts:
+        anc = [t for j, l2, t in hs if j <= i]        # 自 H1 而下之歷代標題
+        if any(any(x in t for x in EXC) for t in anc):
             continue
-        e = next(j - 1 for j in shallower if j > i)
-        sub = [(j, tt) for j, l2, tt in hs if l2 == lvl + 1 and i < j <= e]
-        lost = []
-        if sub:
-            lost += lost_in(lines, i, sub[0][0] - 1)
-            for k2, (s0, tt) in enumerate(sub):
-                s1 = (sub[k2 + 1][0] - 1) if k2 + 1 < len(sub) else e
-                if any(x in tt for x in EXC):
-                    continue
-                lost += lost_in(lines, s0, s1)
-        else:
-            lost = lost_in(lines, i, e)
+        e = next(j - 1 for j in nxt if j > i)
+        lost = lost_in(lines, i, e)
         if lost:
-            miss[u"%s・%s" % (tag, t[:26])] = (len(lost), sum(len(norm(p)) for p in lost), lost)
+            t = next(tt for j, l2, tt in hs if j == i)
+            miss[u"%s・L%d・%s" % (tag, i, t[:24])] = (len(lost), sum(len(norm(p)) for p in lost), lost)
     return miss
 
 
@@ -311,6 +305,85 @@ if badrows:
 if u"\x01" in book:
     bad(u"護符未收（\\x01 殘留）")
 
+# ── 十・出處閘門：自稱『律藏原文』者必冠卷段（凡例第三條之自證）──────────
+YUAN = re.compile(u"#### 律藏原文\n\n(.{0,3000}?)(?=\n#### |\n### |\Z)", re.S)
+yq = YUAN.findall(book)
+yn = [s for s in yq if not re.search(u"卷[一二三四五六七八九十0-9]|卷 [0-9]|大正|No\\.142|《戒本》", s)]
+if yn:
+    bad(u"『律藏原文』無出處 %d/%d 欄：例「%s」" % (len(yn), len(yq), norm(yn[0])[:24]))
+note(u"出處閘門：律藏原文 %d 欄俱冠卷段・戒文（依戒本次第）%d 欄" % (
+    len(yq), len(re.findall(u"#### 戒文（戒本次第）", book))))
+
+# ── 十一・引號之闭合（律文原樣登載者不計・新冊不得自造破口）──────────────
+IA3 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
+IB3 = next((i for i in range(IA3 + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
+NL = chr(10)
+OFF3 = book.index(NL.join(BL[IA3:IB3])) if IA3 else -1
+OFF4 = book.index(NL.join(BL[IB3 - 1:IB3])) if IB3 < len(BL) else len(book)
+
+
+def walk(op, cl, nm, allow_zone=None):
+    st, miss = [], []
+    for i, c in enumerate(book):
+        if c == op:
+            st.append(i)
+        elif c == cl:
+            if st:
+                st.pop()
+            else:
+                miss.append((u"多闭合", i))
+    miss += [(u"未闭合", x) for x in st]
+    for kind, i in miss:
+        ln = book[:i].count(NL) + 1
+        txt = u"%s%s L%d：%s" % (nm, kind, ln, book[max(0, i - 40):i + 26].replace(NL, " "))
+        if allow_zone and allow_zone[0] <= i <= allow_zone[1]:
+            note(u"　引號例外（律文原樣登載）：%s" % txt)
+        else:
+            bad_(txt)
+    return len(miss)
+
+
+bad_ = []
+
+
+def bad_(txt):
+    FAIL.append(u"引號破口・" + txt)
+
+
+zone = (OFF3, OFF4) if OFF3 >= 0 else None
+for op, cl, nm in [(u"「", u"」", u"方引號"), (u"『", u"』", u"雙引號"), (u"〔", u"〕", u"六角")]:
+    walk(op, cl, nm, zone)
+if not any(x.startswith(u"引號破口") for x in FAIL):
+    note(u"引號之闭合：除附錄三律文原樣登載者外，俱合")
+
+# ── 十二・節號一制（章內 H2 須自一連貫・形制唯一）────────────────────────
+for t, (a, b, sub) in CHAP.items():
+    js = [m.group(1) for m in re.finditer(u"^## 第([一二三四五六七八九十]+)節", u"\n".join(BL[a:b]), re.M)]
+    ns = [m.group(1) for m in re.finditer(u"^## ([一二三四五六七八九十]+)、", u"\n".join(BL[a:b]), re.M)]
+    if js and ns:
+        bad(u"%s 節號兩制並存（第N節 %d・裸序 %d）" % (t, len(js), len(ns)))
+    if js and [P.cnum(x) for x in js] != list(range(1, len(js) + 1)):
+        bad(u"%s 節號不連貫：%s" % (t, js))
+
+# ── 十三・附錄三戒本歷條：各篇之數須副其自宣（號段行按段計）─────────────
+ia = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
+ib = next((i for i in range(ia + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
+ap3 = u"\n".join(BL[ia:ib])
+tot = 0
+for m in re.finditer(u"^## (甲、|乙、)(.+?)（戒本 (\\d+) 條(?:，律文別宣 (\\d+) 條)?(.*)?）$", ap3, re.M):
+    want = int(m.group(3))
+    s0 = m.end()
+    nxt = re.search(u"^## (甲、|乙、)", ap3[s0:], re.M)
+    blk = ap3[s0:s0 + (nxt.start() if nxt else len(ap3))]
+    got = 0
+    for r in re.finditer(u"^\\s*(\\d+)(?:[～~](\\d+))?\\.\\s", blk, re.M):
+        got += (int(r.group(2)) - int(r.group(1)) + 1) if r.group(2) else 1
+    tot += got
+    tag = m.group(2)[:16]
+    if got != want and not (m.group(4) or u""):
+        note(u"　戒本篇 %s：宣 %d 號・列 %d（其間共戒不別宣者依表例不重出）" % (tag, want, got))
+note(u"附錄三歷條：列舉之號共 %d（比丘 250・尼別宣 233・共 483 號之制）" % tot)
+
 
 # ── 九・節級與名級死鏈（章在而節無・案名不屬其章）──────────────────────────
 CH_TXT = {t: u"\n".join(BL[a:b]) for t, (a, b, sub) in CHAP.items()}
@@ -332,6 +405,8 @@ for m in re.finditer(u"第([一二三四五六七八九十]+)章案例[一二三
         continue
     if name not in txt.replace(u" ", u""):
         dead_name.append(u"%s『%s』" % (ch, name))
+if not dead_name:
+    note(u"名級指針：%d 條（今冊指針唯『第N章案例M』之形，不附括弧名）" % len(re.findall(u"『[^』]{1,20}』案", book)))
 if dead_sec:
     bad(u"節級死鏈 %d 條：%s" % (len(dead_sec), u"｜".join(sorted(set(dead_sec))[:10])))
 if dead_name:

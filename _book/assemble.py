@@ -191,10 +191,11 @@ for l in io.open(os.path.join(HERE, u"對位表.tsv"), encoding=u"utf-8").read()
 CARD_NAME = {}
 for code, c in CARDS.items():
     ttl = c["title"]
-    head = re.split(u"——|：|（", ttl)[0].strip()
-    tail = re.split(u"——", ttl)[-1].strip() if u"——" in ttl else u""
+    cut = lambda z: re.sub(u"[「」『』〔〕【】（）：；]", u"", z or u"")
+    head = cut(re.split(u"——|：|（", ttl)[0].strip())
+    tail = cut(re.split(u"——", ttl)[-1].strip()) if u"——" in ttl else u""
     nm = head if len(head) >= 3 and head not in (u"婬戒", u"盜戒", u"殺戒", u"大妄語戒") else (tail or head)
-    CARD_NAME[code] = u"『%s』" % (nm[:14] or head[:8])
+    CARD_NAME[code] = u"『%s』" % (nm[:12] or head[:8])
 
 HOME_BY_NEW = {}
 for code, chap in PLACE_FW.items():
@@ -288,30 +289,29 @@ def ref_fn(text, stats):
     再化裸碼為「第N章『某』案」；無名可歸者原樣保留，由尺高報。"""
     CODE = u"〔(?:遮|開|僧|補遺)\\d+〕"
 
-    def loc(code, with_name=None):
+    def loc(code):
         stats[u"母案碼歸名"] = stats.get(u"母案碼歸名", 0) + 1
         got = CODE_LOC.get(code)
         if not got:
-            return (with_name or code)
+            return code
         ch, n, ttl = got
-        head = re.split(u"——|：|（", ttl)[0].strip()[:14]
-        if with_name:
-            return u"%s案例%s（%s）" % (ch, P.cn_num(n), with_name)
-        return u"%s案例%s『%s』案" % (ch, P.cn_num(n), head)
+        return u"%s案例%s" % (ch, P.cn_num(n))
 
     def named(m):
-        return loc(m.group(1), m.group(2))
+        stats[u"母案碼歸名"] = stats.get(u"母案碼歸名", 0) + 1
+        return m.group(2)          # 名在则留名，碼去即得自然之稱（如「解牛牽牛案」）
 
     t = re.sub(u"(" + CODE + u")([\\u3400-\\u9fffA-Za-z0-9]{2,12}?)(?=[，。、；：）」\\s|])", named, text)
     return re.sub(CODE, lambda m: loc(m.group(0)), t)
 
 
 # ── 案例之缝合（指南第三部：文獻一詳本為血肉・文獻二三環裁斷為骨架）─────────
-SEC_LABEL = [(u"事相經過", 1), (u"心相照鏡", 1), (u"法相剖析", 1), (u"佛陀處斷", 1),
-             (u"微觀動力學深描", 1), (u"人間智慧與行持", 1), (u"現代對讀", 1), (u"治理與修持對治", 1),
-             (u"律藏原文", 1)]
+SEC_LABEL = [u"事相經過", u"心相照鏡", u"法相剖析", u"佛陀處斷", u"微觀動力學深描",
+             u"人間智慧與行持", u"現代對讀", u"治理與修持對治", u"律藏原文", u"戒文（戒本次第）"]
 NARR_VERB = re.compile(u"^(把|自|將|以|看|聽|貪|瞋|癡|慢|疑|惧|恐|逐|求|爭|執|守|掩|藏|隱|規|避|"
                        u"託|藉|憑|恃|挾|營|圖|算|計|怨|恨|責|諂|誑|覆|掉|散|怠|放|認|見|聞|知|受|想|行|做|作|說|言|動|起|犯|修|持|犯)")
+MIRROR_LEAD = [u"你且自照：", u"你照此心：", u"你當自問：", u"你——"]
+ML = [0]
 NO_PREFIX = re.compile(u"^(這|那|此|其|所|是|一|凡|若|但|而|且|又|或|故|蓋|夫|唯|莫|無|不|每|真正|一切)")
 
 
@@ -328,7 +328,8 @@ def to_second(text):
         paras[0] = u"你" + first
         return u"\n\n".join(paras), True
     if first and not NO_PREFIX.match(first) and len(first) > 6:
-        paras[0] = u"你——" + first
+        paras[0] = MIRROR_LEAD[ML[0] % 3] + first
+        ML[0] += 1
         return u"\n\n".join(paras), True
     return text, False
 
@@ -385,16 +386,20 @@ def render_case(idx, title, fw_code, hl_case):
         src.append(relink(f[u"律藏原文"].strip(), u"v"))
     if hq:
         src.append(relink(hq.strip(), u"h"))
-    body[u"律藏原文"] = u"\n\n".join(x for x in src if x).strip()
+    raw_src = u"\n\n".join(x for x in src if x).strip()
+    # 出處閘門：唯冠卷段／大正／戒本者得自稱『律藏原文』，餘者降其名為『戒文』
+    keyed = bool(re.search(u"卷[一二三四五六七八九十0-9]|卷 [0-9]+|大正|No\\.142|《戒本》", raw_src))
+    body[u"律藏原文" if keyed else u"戒文（戒本次第）"] = raw_src
+    body[u"_原文key"] = u"律藏原文" if keyed else u"戒文（戒本次第）"
     body[u"微觀動力學深描"] = relink(f.get(u"微觀心理動力學深描", u""), u"v").strip()
     body[u"治理與修持對治"] = relink(f.get(u"治理與修持對治", u""), u"v").strip()
     shield = relink(u"\n\n".join(v for k, v in hp.items() if u"防禦靶點" in k), u"h")
     if fw_code and CARDS[fw_code].get(u"正理"):
         shield = (shield + u"\n\n" if shield else u"") + u"**正理參照**：" + CARDS[fw_code][u"正理"]
     t = [u"### 案例%s：%s" % (P.cn_num(idx), title)]
-    for key, _ in SEC_LABEL:
+    for key in SEC_LABEL:
         txt = body.get(key, u"").strip()
-        if key == u"律藏原文" and not txt:
+        if key in (u"律藏原文", u"戒文（戒本次第）") and not txt:
             continue
         if not txt:
             continue

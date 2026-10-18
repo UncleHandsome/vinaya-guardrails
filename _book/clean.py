@@ -59,6 +59,26 @@ GUIDE_BLOCK = re.compile(u"^\\s*>?\\s*〔?◈?跨章精準導流〕?.*$|^\\s*\\*
 JIAER = re.compile(u"、?\\s*【[^】]*慢心療法[^】]*】")
 
 
+LEDG_QUOTE = [u"章末檢索附註", u"之查檢指針", u"之收束指針", u"《總表與終極壓縮》", u"由定位行自算"]
+
+
+def drop_ledger_quotes(text, stats):
+    """整塊『章末檢索／收束指針』之圍注全落：彼乃舊冊之後台導航，非義理。"""
+    lines = text.split(u"\n")
+    out, i = [], 0
+    while i < len(lines):
+        l = lines[i]
+        if any(x in l for x in LEDG_QUOTE) and (l.lstrip().startswith(u">") or l.lstrip().startswith(u"**")):
+            stats["台帳圍注"] += 1
+            i += 1
+            while i < len(lines) and (lines[i].lstrip().startswith(u">") or not lines[i].strip()):
+                i += 1
+            continue
+        out.append(l)
+        i += 1
+    return u"\n".join(out)
+
+
 def strip_guide_blocks(text, stats):
     out = []
     for l in text.split(u"\n"):
@@ -94,7 +114,7 @@ COUNT_TOKEN = re.compile(r"『[^』]{1,12}』\s*[0-9]+\s*(?:見|次)|[0-9]+\s*�
 DROP_HEAD = [
     u"三十格", u"林下留白", u"空白格", u"留白觀",
     u"章末收卷", u"全章收卷", u"公堂燈熄", u"吃茶去", u"松風吹拂", u"樹下吹風",
-    u"章末引橋", u"把法袍留在門外", u"走出解剖室", u"引橋",
+    u"章末引橋", u"把法袍留在門外", u"走出解剖室", u"核心引橋", u"引橋：手握總帳",
     u"五維立體檢索", u"檢索總表", u"檢索樞紐", u"檢索指南", u"速查軸",
     u"綁定台帳", u"複統攝深水稱重", u"終極壓縮四階",
     u"附錄收編之界", u"開卷標準目錄", u"全書詳細目錄", u"卷首導讀",
@@ -308,13 +328,45 @@ def detent_items(text, stats):
     return u"\n".join(out)
 
 
+# 舊冊之括弧標籤 → 出版之自然小標
+LABELS = [(u"**【案發現場（制戒因緣）】：**", u"**制戒因緣**："),
+          (u"**【案發現場（犍度因緣）】：**", u"**犍度因緣**："),
+          (u"**【案發現場】：**", u"**案發現場**："),
+          (u"**【制戒因緣】：**", u"**制戒因緣**："),
+          (u"**【行為心理剖析】：**", u"**行為心理剖析**："),
+          (u"**【防禦靶點】：**", u"**此戒所護**："),
+          (u"**【律制】：**", u"**律制**："),
+          (u"**【心理剖析】：**", u"**心理剖析**："),
+          (u"【條文】：", u"戒文："), (u"【律文】：", u"律文："),
+          (u"【初制戒文】：", u"初制戒文："), (u"【二制戒文】：", u"二制戒文："),
+          (u"【三制戒文】：", u"三制戒文："),
+          (u"**現代對應：**", u"**現代對讀**："),
+          (u"本冊", u"本書")]
+LABEL_NUM = re.compile(u"【第([0-9]+)條 條文】：")
+
+
+def naturalize_labels(text, stats):
+    t = text
+    for bad, good in LABELS:
+        if bad in t:
+            stats["標籤歸形"] = stats.get(u"標籤歸形", 0) + t.count(bad)
+            t = t.replace(bad, good)
+    k = len(LABEL_NUM.findall(t))
+    if k:
+        stats["標籤歸形"] = stats.get(u"標籤歸形", 0) + k
+        t = LABEL_NUM.sub(lambda m: u"第%s條戒文：" % m.group(1), t)
+    return t
+
+
 def apply_rules(text, stats, ref_fn=None, name_pairs=(), overrides=None):
     """規則之總序：先塊後行、先形後數。"""
     t = text
-    for bad, good in (overrides or []):        # 指定改寫先行，免得規則改字之後錨點失配
+    t = text
+    for bad, good in (overrides or []):        # 指定改寫先行
         if bad and bad in t:
             stats["指定改寫"] = stats.get("指定改寫", 0) + 1
             t = t.replace(bad, good)
+    t = naturalize_labels(t, stats)
     keep = []
     for l in t.split(u"\n"):
         if DING.match(l.strip()):
@@ -324,6 +376,7 @@ def apply_rules(text, stats, ref_fn=None, name_pairs=(), overrides=None):
     t = u"\n".join(keep).replace(u"\n\n\n", u"\n\n")
     t = strip_tags(t, stats)
     t = strip_guide_blocks(t, stats)
+    t = drop_ledger_quotes(t, stats)
     t = drop_blocks(t, stats)
     t = tables_purge(t, stats)
     t = drop_ledger_lines(t, stats)
