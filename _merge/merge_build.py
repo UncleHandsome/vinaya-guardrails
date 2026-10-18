@@ -9,6 +9,10 @@
 """
 import os, re, sys, io, glob, datetime
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import refnum as RN
+import chapmap as CM
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OLD = os.path.join(ROOT, "_archive", u"舊本")
 V = glob.glob(os.path.join(OLD, "ver38*.md"))[0]
@@ -41,10 +45,15 @@ V_CARDS = {}                                # 〔X N〕 → (起, 迄, 全文)
 HD_END = sorted(i for i, l in enumerate(vlines, 1) if re.match(r"^#{1,6} ", l))
 
 
-def next_head(a, lines, from_idx):
-    """自 from_idx 起之下一個任何層級標題行（卡片之界，防吞後文）。"""
+def next_head(a, lines, from_idx, lvl=4):
+    """自 from_idx 起下一個『不高於卡身層級』之標題行。
+
+    卡是 H4（`#### 〔遮1〕`／`#### 案例一`），其六段欄目標題是 H5——若以『任何層級』為界，
+    卡身即在其第一根 H5 欄桿處攔腰折斷，百則只留卡題與定位行（第三十八輪之實測）。
+    """
     for i in range(from_idx, len(lines) + 1):
-        if re.match(r"^#{1,6} ", lines[i - 1]) and i > a:
+        m = re.match(r"^(#{1,%d}) " % lvl, lines[i - 1])
+        if m and i > a:
             return i
     return len(lines) + 1
 
@@ -200,32 +209,25 @@ H2N = {u"第一章": u"第一章", u"第二章": u"第二章", u"第三章": u"�
 # ── 指針重算（relink）：舊冊章次 → 本冊章次 ────────────────────────────────
 # 台帳之自裁（可改）：三帳分立——百則帳（框架 100 碼・133 綁定不動）・今冊另立「案帳」
 # （164 素材卡之定位行自算，不入 133）・不立〔尼-波N〕新碼（女眾案以素材碼行世）。
-V_MAP = {u"第一章": u"第四章", u"第二章": u"第五章", u"第三章": u"第六章",
-         u"第五章": u"第二十一章", u"第六章": u"第七～十三章（案例庫）",
-         u"第七章": u"附錄三（總表與檢索）", u"第八章": u"卷末工具箱", u"第九章": u"第二十七章"}
-H_MAP = {u"第五章": u"第七章", u"第六章": u"第八章", u"第七章": u"第九章",
-         u"第八章": u"第十章", u"第九章": u"第十一章", u"第十章": u"第十二章",
-         u"第十一章": u"第十三章", u"第十二章": u"第十四～十五章", u"第十三章": u"第十六章",
-         u"第十四章": u"第十七章", u"第十五章": u"第十八章", u"第十六章": u"第二十二章",
-         u"第十七章": u"第二十三章", u"第十八章": u"第二十四章", u"第十九章": u"第二十五章",
-         u"第二十章": u"第二十六章"}          # 護欄第一～四章同名，故不列（自指不改）
-SPLIT = {u"第四章": (u"第十九章", u"第二十章", u"第五節"),     # 框架第四章 → 19・20 章
-         u"第十章": (u"第十二章", u"第二十章", u"七滅諍")}     # 護欄第十章 → 12・20 章
+V_MAP, H_MAP, SPLIT = CM.V_MAP, CM.H_MAP, CM.SPLIT    # 地圖之法源在 `_merge/chapmap.py`
 relink_stat = {u"改指針": 0, u"存疑未改": 0, u"戒本表改": 0, u"多章待裁": 0}
+CUT_BUYI = [0]                       # 附錄H 內被挖代之補遺卡數（挖在重算之前，否則替不到）
+CUT_V6 = [0]                         # 框架第六章原卷首搬入字量
 
 
 def _map_ch(num, sec, src):
     m = V_MAP if src == "v" else H_MAP
     key = num if num.startswith(u"第") else u"第%s章" % num
-    if key not in m:
-        return None
-    sp = SPLIT.get(key)
-    if sp:
-        if sec and sp[2] in sec:
+    sp = SPLIT.get(key)                                  # 拆章者唯 SPLIT 有，故先問 SPLIT；
+    if sp:                                                # 先問地圖則「第四章」之屬 v 而不在 V_MAP，
+        if sec and sp[2] in sec:                          #   未命中即原樣回拋——七十六條死鏈由此而生。
             return sp[1]
         if not sec:
             relink_stat[u"存疑未改"] += 1
             return sp[0] + u"（另見%s）" % sp[1]
+        return sp[0]
+    if key not in m:
+        return None
     if u"～" in m[key]:
         relink_stat[u"多章待裁"] += 1
     return m[key]
@@ -383,6 +385,40 @@ def hslice(chap_cn):
     return relink(strip_h1("\n".join(hlines[s - 1:e]).rstrip()), "h")
 
 
+def h_prose(chap_cn, before=None, after=None):
+    """護欄某章之『非卡散文』（章首論述・結構解剖・圖表）。卡身另由 h_cases 升六段式，
+    故此處逐張挖去卡身，只留其餘——昔時只搬卡不搬論述，女眾兩章之導言遂全佚（第三十八輪實測）。
+
+    before／after：以某標題字樣為刀，取其一側（供護欄第十二章分隸合編第十四・十五兩章）。
+    """
+    if chap_cn not in H_CHAP:
+        return u""
+    s, e = H_CHAP[chap_cn]
+    seg = "\n".join(hlines[s - 1:e]).rstrip()
+    if before and before in seg:
+        seg = seg.split(before)[0]
+    elif after and after in seg:
+        seg = seg[seg.find(after):]
+    for i, j, t, bd in h_cases(chap_cn):
+        seg = seg.replace(bd, u"")
+    seg = re.sub(r"\n{3,}", "\n\n", seg).strip()
+    if len(seg) < 60:
+        return u""
+    return relink(strip_h1(seg), "h")
+
+
+def v_prose6():
+    """框架第六章之『非卡散文』（原卷首凡例・情境導航矩陣・三聚之題）。
+    百則之卡已分隸第七～十三章，唯此段導航文字昔時未搬——不搬則三聚之名與矩陣俱亡。"""
+    s, e = V_CHAP[u"第六章"]
+    seg = "\n".join(vlines[s - 1:e]).rstrip()
+    for c, (i, j, bd) in V_CARDS.items():
+        if s <= i <= e and bd and bd in seg:
+            seg = seg.replace(bd, u"")
+    seg = re.sub(r"\n{3,}", "\n\n", seg).strip()
+    return relink(strip_h1(seg), "v") if len(seg) > 60 else u""
+
+
 
 def demote(t, levels=1):
     """搬入之塊須降其標題層，否則合冊之 H 序亂（跳過 ``` 圍欄內之行）。"""
@@ -442,7 +478,12 @@ for pname, ptitle, chaps in PARTS:
         w(u"")
         body = []
         if ch in (u"第一章", u"第二章", u"第三章", u"第四章"):
-            body.append(hslice(ch))
+            body.append(u"## 甲・護欄冊之文〔指針已重算・待復核〕\n\n" + hslice(ch)
+                        if ch == u"第四章" else hslice(ch))
+            if ch == u"第四章":
+                body.append(u"## 乙・框架冊第一章全章（立法本懷與八大正理——本冊第四章即此兩源所合，"
+                            u"故六節之序一仍其舊，凡指「第四章第N節」者皆指此）〔指針已重算・待復核〕\n\n"
+                            + vslice(u"第一章"))
         elif ch == u"第五章":
             body.append(vslice(u"第二章"))
         elif ch == u"第六章":
@@ -451,6 +492,14 @@ for pname, ptitle, chaps in PARTS:
             hc = {u"第七章": u"第五章", u"第八章": u"第六章", u"第九章": u"第七章",
                   u"第十章": u"第八章", u"第十一章": u"第九章", u"第十二章": u"第十章",
                   u"第十三章": u"第十一章"}[ch]
+            pr = h_prose(hc)
+            if pr:
+                body.append(u"## 甲・護欄本章章首論述（今語・結構解剖，卡身已挖出不兩出）〔指針已重算・待復核〕\n\n" + pr)
+            if ch == u"第七章":
+                p6 = v_prose6()
+                if p6:
+                    body.append(u"## 乙・框架百則原卷首（凡例・情境導航矩陣・三聚題序；卡身分隸本冊第七～十三章）〔指針已重算・待復核〕\n\n" + p6)
+                    CUT_V6[0] = len(p6)
             body.append(u"### 第一節・古典判例（框架冊百則之歸屬此聚者，連碼整卡）\n\n" +
                         vcards_of(ch, with_buyi=(ch == u"第十二章")))
             ups = []
@@ -462,10 +511,12 @@ for pname, ptitle, chaps in PARTS:
             if ch == u"第十三章":
                 body.append(u"〔未裁：二十犍度只標「上」而全書無「下」——護欄第十一章 35,090 字／27 案之剩餘部分，"
                             u"須裁另立「第十四章（下）」併入或削。〕")
-                hseg = demote(relink(strip_h1("\n".join(vlines[V_APX["H"][0]:V_APX["H"][1]]).rstrip()), "v"), 1)
+                raw = "\n".join(vlines[V_APX["H"][0]:V_APX["H"][1]]).rstrip()
                 for c, (i, j, bd) in V_CARDS.items():
-                    if c.startswith(u"〔補遺"):
-                        hseg = hseg.replace(bd, u"→ 已入第十二章第三節　%s" % c)
+                    if c.startswith(u"〔補遺") and bd in raw:
+                        raw = raw.replace(bd, u"→ 已入第十二章第三節　%s" % c)
+                        CUT_BUYI[0] += 1
+                hseg = demote(relink(strip_h1(raw), "v"), 1)
                 body.append(u"### 末節・調部導言與校勘之據（框架附錄 H 之非補遺部分）〔指針已重算・待復核〕\n\n" + hseg)
         elif ch in (u"第十四章", u"第十五章", u"第十六章", u"第十七章", u"第十八章"):
             hc = {u"第十四章": u"第十二章", u"第十五章": u"第十二章", u"第十六章": u"第十三章",
@@ -474,17 +525,16 @@ for pname, ptitle, chaps in PARTS:
             ups = [u"#### 〔素材・護欄 %s %s〕\n\n%s" %
                    (hc, re.match(u"案例([一二三四五六七八九十]+)", t).group(0),
                     upgrade_hulan(hc, b, t)) for i, j, t, b in cs]
-            pre = (u"#### 案例" in "\n".join(hlines[H_CHAP[hc][0] - 1:H_CHAP[hc][1]]))
-            if ch == u"第十四章":
-                s, e = H_CHAP[hc]
-                body.append(relink("\n".join(hlines[s - 1:e]).split(u"#### 案例")[0].rstrip(), "h"))
-            elif ch == u"第十五章":
-                s, e = H_CHAP[hc]
-                seg = "\n".join(hlines[s - 1:e])
-                head = seg[seg.find(u"### 三、"):].split(u"#### 案例")[0].rstrip() if u"### 三、" in seg else u""
-                body.append(relink(head, "h"))
-                body.append(u"\n\n---\n\n".join(ups) if ups else u"（本章無護欄案例卡）")
-            else:
+            hd = {u"第十四章": u"甲・護欄第十二章章首論述（女眾戒何以更多）",
+                  u"第十五章": u"甲・護欄第十二章『三、尼端死罪』之解剖",
+                  u"第十六章": u"甲・護欄第十三章章首論述",
+                  u"第十七章": u"甲・護欄第十四章章首論述",
+                  u"第十八章": u"甲・護欄第十五章章首論述"}[ch] + u"〔指針已重算・待復核〕"
+            pr = (h_prose(hc, before=u"### 三、") if ch == u"第十四章" else
+                  h_prose(hc, after=u"### 三、") if ch == u"第十五章" else h_prose(hc))
+            if pr:
+                body.append(u"## %s（今語・卡身已挖出不兩出）\n\n%s" % (hd, pr))
+            if ch != u"第十四章":
                 body.append(u"\n\n---\n\n".join(ups) if ups else u"（本章無護欄案例卡）")
             body.append(u"〔未裁：女眾 48 案在框架側無一尼篇本位母案可掛——〔尼-波N〕係新立碼，"
                         u"用則百則閉環破（100→105）；不用則此章無法相帳。〕")
@@ -556,7 +606,16 @@ w(demote(relink(strip_h1("\n".join(vlines[V_APX[u"終卷"][0] - 1:V_APX[u"終卷
 
 book = "\n".join(x for x in O if x != u"")
 book = re.sub(r"\n{4,}", "\n\n\n", book)
+def tag_dead_refs(text):
+    """冊成之後之一掃：凡「第N章第M節」而該章實無此節者，就地掛〔指針待判〕——
+    不靜態留舊號（跨冊指涉本有兩義，強猜即錯），亦不留死鏈於無形。"""
+    out, n = RN.tag_dead(text)
+    print("指針待判：%d 條已就地標出（跨冊兩義者，須逐條裁）" % n)
+    return out
+
+
 book = normalize_h1(book)
+book = tag_dead_refs(book)
 io.open(OUT, "w", encoding="utf-8", newline="\n").write(book + "\n")
 print("產出：%s" % OUT)
 print("行 %d｜漢字 %d｜章 %d｜待寫 %d｜待校 %d｜指針待改 %d｜未裁 %d" % (
@@ -564,6 +623,8 @@ print("行 %d｜漢字 %d｜章 %d｜待寫 %d｜待校 %d｜指針待改 %d｜�
     len(re.findall(r"^# 第[一二三四五六七八九十]+章", book, re.M)),
     book.count(u"〔待寫"), book.count(u"〔待校"), book.count(u"〔指針已重算・待復核〕"), book.count(u"〔未裁")))
 print("指針重算：%s" % ("｜".join("%s %d" % (k, v) for k, v in relink_stat.items())))
+print("附錄H 挖代之補遺卡：%d 張（須與補遺總數相符，否則有雙出）" % CUT_BUYI[0])
+print("框架第六章原卷首搬入：%d 字" % CUT_V6[0])
 print("框架卡安置：%d／115（補遺 %d）" % (
     len(CARD_HOME), sum(1 for k, v in CARD_HOME.items() if k.startswith(u"〔補遺"))))
 from collections import Counter as _C

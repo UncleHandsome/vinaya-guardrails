@@ -5,6 +5,10 @@
 退出碼：有硬病則 1。
 """
 import io, os, re, sys, glob, hashlib
+from collections import Counter
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import refnum as RN
+import chapmap as CM
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OLD = os.path.join(ROOT, "_archive", u"舊本")
@@ -90,8 +94,10 @@ print("\n=== 5 文獻衛生 ===")
 
 
 def prose(t):
-    """只留散文：剝圍欄、引號內之文（逐字引文如實登載舊形，舊尺通例不較）、括注。"""
+    """只留散文：剝圍欄、引號內之文（逐字引文如實登載舊形，舊尺通例不較）、括注。
+    `> ` 行同剝——此即 relink『逐字引文不動』之同一域，兩尺須同一邊界。"""
     t = re.sub(r"```.*?```", "", t, flags=re.S)
+    t = "\n".join(l for l in t.split("\n") if not l.startswith(u"> "))
     for a, c in ((u"「", u"」"), (u"『", u"』"), (u"〔", u"〕"), (u"“", u"”")):
         t = re.sub(re.escape(a) + r"[^" + re.escape(c) + r"]*" + re.escape(c), "", t)
     return t
@@ -115,44 +121,30 @@ except Exception as e:
 p("旧冊檔名洩入（ver38／佛陀的護欄）", b.count("ver38") + b.count(u"佛陀的護欄"))
 
 print("\n=== 8 死鏈檢（章級・節級・戒本表）===")
-CN2 = {c: i + 1 for i, c in enumerate(u"〇零一二三四五六七八九十百".replace(u"〇", u"〇"))}
-CN2 = {c: i for i, c in enumerate(u"零一二三四五六七八九")}
-CN2[u"十"] = 10
-
-
-def cnum(s):
-    if s in CN2:
-        return CN2[s]
-    if u"十" in s:
-        a2, _, b2 = s.partition(u"十")
-        return (CN2.get(a2, 1) or 1) * 10 + CN2.get(b2, 0)
-    return 0
-
-
-idx = [(cnum(m.group(1)), i) for i, m in
-       ((i, re.match(r"^# 第([一二三四五六七八九十]+)章　", l)) for i, l in enumerate(L, 1)) if m]
-sec = {}
-for k, (n, s0) in enumerate(idx):
-    e0 = idx[k + 1][1] - 1 if k + 1 < len(idx) else len(L)
-    sec[n] = "\n".join(L[s0 - 1:e0])
+sec = RN.chapter_blocks(b)
 p("本冊章界切得（應 28）", "%d（最大章號 %d）" % (len(sec), max(sec) if sec else 0))
-badref, badsec = [], []
-for m in re.finditer(u"第([一二三四五六七八九十]+)章(第([一二三四五六七八九十]+)節)?", b):
-    n = cnum(m.group(1))
-    if n > 28 or n < 1:
-        badref.append(m.group(0))
-        continue
-    if m.group(3):
-        tg = sec.get(n, "")
-        if tg and not re.search(r"^#{2,6} " + re.escape(m.group(3)), tg, re.M):
-            badsec.append(m.group(0))
+badref = [m.group(0) for m in RN.REF.finditer(b) if RN.cnum(m.group(2)) not in sec]
+untagged = []
+dead_list = list(RN.dead_refs(b))
+for m, tagged in dead_list:
+    if not tagged:
+        untagged.append(m.group(0))
+        print("   未掛標樣本：%s ｜其後：%s" % (m.group(0), b[m.end():m.end() + 12].replace("\n", "⏎")))
+dead, stale = len(dead_list), b.count(RN.TAG) - len(dead_list)
 p("章級死鏈（指向不存在之章）", "%d 種 %s" % (len(set(badref)), "、".join(sorted(set(badref)))[:64]))
-p("節級死鏈（章在而節無）", "%d 種 %s" % (len(set(badsec)), "、".join(sorted(set(badsec)))[:88]))
+p("節級死鏈（章在而節無）", "%d 條／%d 種｜其中未掛標 %d（須 0）" % (dead, len({m.group(0) for m, _ in dead_list}), len(untagged)))
+p("〔指針待判〕之數（跨冊兩義・候裁）", "%d／殭標 %d（須 0）" % (b.count(RN.TAG), stale))
+_kinds = Counter(m.group(0) for m, _ in dead_list)
+p("死鏈逐種清單（候裁，×次）", "、".join("%s×%d" % (k, v) for k, v in _kinds.most_common()))
 p("戒本表舊指針（書中：第X章案例Y）", len(re.findall(u"書中：第[一二三四五六七八九十]+章案例", b)))
 p("素材卡標（應 164）", len(re.findall(u"^#### 〔素材・護欄", b, re.M)))
 p("指針已重算待復核之標", b.count(u"〔指針已重算・待復核〕"))
 if badref:
     fails.append("章級死鏈 %d 種" % len(set(badref)))
+if untagged:
+    fails.append("節級死鏈未掛標 %d 條" % len(untagged))
+if stale:
+    fails.append("〔指針待判〕殭標 %d 枚" % stale)
 
 print("\n=== 6 舊本未動之證 ===")
 EXP = {"ver38": "118a5961c090abf2", u"護欄": "a6a289211af5715e"}
@@ -167,5 +159,70 @@ for f, k in ((os.path.join(OLD, "ver38四分律_起心動念心智分析框架_�
 print("\n=== 7 体量 ===")
 p("行／漢字", "%d／%d" % (len(L), len(re.findall(r"[一-鿿]", b))))
 p("兩本舊本漢字之和", len(re.findall(r"[一-鿿]", v)) + len(re.findall(r"[一-鿿]", h)))
+print("\n=== 9 落地・重出（量產物之身，不量卡號有無）===")
+# 比對一律先過 `chapmap.skeleton`：指針隨改（舊章號→新章名）不算佚文，改寫值亦不殘形
+BSK = {CM.skeleton(l) for l in L if len(l.strip()) >= 12 and len(CM.skeleton(l)) >= 8}
+BHEAD = {CM.skeleton(re.sub(r"^#{1,6} ", "", l)) for l in L if re.match(r"^#{1,6} ", l)}
+BWIDE = [CM.skeleton(l) for l in L if l.startswith("# ")]
+lost = []
+for tag, src in ((u"框架", v), (u"護欄", h)):
+    for l in src.split("\n"):
+        m2 = re.match(r"^#{2,3} (.+)$", l)
+        if not m2:
+            continue
+        k = CM.skeleton(m2.group(1))
+        if len(k) < 4 or set(k) <= set("=─│ "):
+            continue
+        if k not in BHEAD and not any(k in x for x in BWIDE):
+            lost.append((tag, m2.group(1).strip()[:26]))
+p("源冊 H2～H3 標題未落地（須 0）", "%d %s" % (len(lost), u"｜".join("%s:%s" % z for z in lost[:4])[:76]))
+if lost:
+    fails.append("標題未落地 %d 目" % len(lost))
+
+miss = 0
+PTR = re.compile(u"第[一二三四五六七八九十]+章|第[一二三四五六七八九十]+節|附錄|書中：|案例|卷末|定位行")
+for tag, src in ((u"框架", v), (u"護欄", h)):
+    ls = src.split("\n")
+    br = [i for i, l in enumerate(ls, 1) if re.match(r"^# (?:第[一二三四五六七八九十]+章|結語|終卷|【?第[一二三四五六七八九十]+部|附錄|尾聲)", l)] + [len(ls) + 1]
+    for q in range(len(br) - 1):
+        paras = [l.strip() for l in ls[br[q] - 1:br[q + 1] - 1] if len(l.strip()) >= 18]
+        if len(paras) < 30:
+            continue
+        gone = [x for x in paras if len(CM.skeleton(x)) >= 8 and CM.skeleton(x) not in BSK]
+        bare = [x for x in gone if not PTR.search(x)]
+        hit = len([x for x in paras if len(CM.skeleton(x)) >= 8]) - len(gone)
+        tot = len([x for x in paras if len(CM.skeleton(x)) >= 8])
+        if tot < 20:
+            continue
+        if hit * 100 < tot * 85:
+            print("   料文落地 %2d%%（%d／%d）於【%s・%s】，其缺皆含指針字樣：%s" % (
+                hit * 100 // tot, hit, tot, tag, ls[br[q] - 1][2:14],
+                "是（隨改，非佚）" if not bare else "★否！有 %d 行無指針而佚" % len(bare)))
+            for x in bare[:3]:
+                print("      佚｜%s" % x[:64])
+        if bare:
+            miss += 1
+p("無指針而佚之章（須 0）", miss)
+if miss:
+    fails.append("料文真佚之章 %d 篇" % miss)
+rows_old = len([l for l in h.split("\n") if u"書中：" in l])
+rows_new = len([l for l in L if u"書中：" in l])
+p("戒本歷條總表之指針行（舊 %d／新 %d，須等）" % (rows_old, rows_new), "等・足" if rows_old == rows_new else "★缺 %d 行" % (rows_old - rows_new))
+if rows_old != rows_new:
+    fails.append("戒本表指針行數不等（舊 %d／新 %d）" % (rows_old, rows_new))
+
+W = 24
+seen = {}
+for i in range(len(L) - W):
+    body = [CM.skeleton(x) for x in L[i:i + W]]
+    if sum(1 for x in body if len(x) >= 12) < 6:
+        continue
+    k = "\n".join(body)
+    if k in seen and i - seen[k] > W:
+        print("   ★整塊重出：行 %d 與 %d｜%s" % (seen[k] + 1, i + 1, body[1][:40]))
+        fails.append("整塊重出 @%d/@%d" % (seen[k] + 1, i + 1))
+    seen.setdefault(k, i)
+p("整塊重出（24 行窗・相距逾一窗）", "0（未報即無）" if not any("整塊" in f for f in fails) else "見上")
+
 print("\n判定：%s" % ("合格（硬病 0）" if not fails else "不合格 %d 項：\n  - %s" % (len(fails), "\n  - ".join(fails))))
 sys.exit(1 if fails else 0)
