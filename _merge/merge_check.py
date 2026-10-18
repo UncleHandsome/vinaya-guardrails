@@ -85,10 +85,15 @@ for k in need:
     p("  有「%s」" % k, "%d／%d" % (cnt[k], n_h))
 p("  帶定位行者", "%d／%d" % (sum(1 for x in blocks if x.startswith(u"〔素材・護欄") and u"定位｜根本心" in x), n_h))
 
-print("\n=== 4 未竟之帳（如實計數，不藏）===")
+print("\n=== 4 未竟之帳（如實計數，不藏；除卷首凡例自述之形）===")
+FAN = RN.fanli_span(L)
+BODY = RN.no_fanli(L)
+p("  卷首凡例之界", "行 %s～%s（帳與死鏈不計此段）" % (FAN[0] + 1, FAN[1]) if FAN else "★查無【卷首・合編凡例】")
+if FAN is None:
+    fails.append("卷首凡例查無（帳無以自外）")
 for k, pat in [(u"〔待寫", u"〔待寫"), (u"〔待校", u"〔待校"), (u"〔指針已重算・待復核〕", u"〔指針已重算・待復核〕"),
-               (u"〔歸章待裁", u"歸章待裁"), (u"〔未裁", u"〔未裁")]:
-    p("  " + k, b.count(pat))
+               (u"歸章待裁（節題之註）", u"歸章待裁"), (u"〔未裁", u"〔未裁")]:
+    p("  " + k, BODY.count(pat))
 
 print("\n=== 5 文獻衛生 ===")
 
@@ -118,19 +123,19 @@ try:
         fails.append("簡形 %d 枚（%s）" % (len(bad), "".join(sorted(set(bad)))[:12]))
 except Exception as e:
     p("簡形尺", "跳過（%s）" % e)
-p("旧冊檔名洩入（ver38／佛陀的護欄）", b.count("ver38") + b.count(u"佛陀的護欄"))
+p("舊冊檔名洩入（ver38／佛陀的護欄）", b.count("ver38") + b.count(u"佛陀的護欄"))
 
 print("\n=== 8 死鏈檢（章級・節級・戒本表）===")
-sec = RN.chapter_blocks(b)
+sec = RN.chapter_blocks(BODY)
 p("本冊章界切得（應 28）", "%d（最大章號 %d）" % (len(sec), max(sec) if sec else 0))
-badref = [m.group(0) for m in RN.REF.finditer(b) if RN.cnum(m.group(2)) not in sec]
+badref = [m.group(0) for m in RN.REF.finditer(BODY) if RN.cnum(m.group(2)) not in sec]
 untagged = []
-dead_list = list(RN.dead_refs(b))
+dead_list = list(RN.dead_refs(BODY))
 for m, tagged in dead_list:
     if not tagged:
         untagged.append(m.group(0))
-        print("   未掛標樣本：%s ｜其後：%s" % (m.group(0), b[m.end():m.end() + 12].replace("\n", "⏎")))
-dead, stale = len(dead_list), b.count(RN.TAG) - len(dead_list)
+        print("   未掛標樣本：%s ｜其後：%s" % (m.group(0), BODY[m.end():m.end() + 12].replace("\n", "⏎")))
+dead, stale = len(dead_list), BODY.count(RN.TAG) - len(dead_list)
 p("章級死鏈（指向不存在之章）", "%d 種 %s" % (len(set(badref)), "、".join(sorted(set(badref)))[:64]))
 p("節級死鏈（章在而節無）", "%d 條／%d 種｜其中未掛標 %d（須 0）" % (dead, len({m.group(0) for m, _ in dead_list}), len(untagged)))
 p("〔指針待判〕之數（跨冊兩義・候裁）", "%d／殭標 %d（須 0）" % (b.count(RN.TAG), stale))
@@ -256,6 +261,65 @@ else:
     p("舊冊自錄之存檔按（應 2／未標須 0）", "%d／%d" % (len(old), len(unl)))
     if unl:
         fails.append("舊冊目錄未標存檔 %d 處" % len(unl))
+
+print("\n=== 11 凡例自證（立約那輪就該配的尺）===")
+fx = "\n".join(L[FAN[0]:FAN[1]]) if FAN else u""
+cl = re.findall(r"^\* \*\*([一二三四五六七八九十]+)・", fx, re.M)
+p("凡例條數（須 10）", "%d %s" % (len(cl), "、".join(cl)))
+if len(cl) != 10:
+    fails.append("凡例條數 %d（須 10）" % len(cl))
+
+
+def vf(no, claim, cond, got):
+    print("  %s｜%s　%s（%s）" % (no, "中" if cond else "★不中", got, claim))
+    if not cond:
+        fails.append("凡例%s 與實物不合：%s" % (no, claim))
+
+
+prov = (len(re.findall(u"^## 甲・", b, re.M)), len(re.findall(u"^## 乙・", b, re.M)))
+vf(u"一", u"帶入之塊註明所出：『## 甲・』『## 乙・』俱在", prov[0] > 0 and prov[1] > 0, u"甲 %d／乙 %d" % prov)
+pc = len(re.findall(u"^### 第一節・古典判例", b, re.M)), len(re.findall(u"^### 第二節・今語敘事", b, re.M))
+vf(u"一", u"案例七章各立『古典判例／今語敘事』兩節", pc == (7, 7), u"%d／%d" % pc)
+BUYI = len(re.findall(r"^#{3,5} 〔補遺\d", b, re.M))
+vf(u"二", u"素材卡 164・補遺十五則為卡題（不充百則之母數）",
+   len(re.findall(r"^#### 〔素材・護欄", b, re.M)) == 164 and BUYI == 15, u"164・補遺卡 %d" % BUYI)
+vf(u"三", u"判別句定於一條（『必是一句律文，不是一個名字』）", fx.count(u"必是一句律文，不是一個名字") == 1,
+   u"%d 見" % fx.count(u"必是一句律文，不是一個名字"))
+# 升格卡區內不得有 ◈（凡例四宣稱未加注）；框架卡區須有 ◎（宣稱隨帶入）
+in_card, cwr, kwr = False, 0, 0
+for l in L:
+    if l.startswith(u"#### 〔素材・護欄"):
+        in_card = True
+    elif re.match(r"^#{1,4} ", l):
+        in_card = False
+    if in_card and u"◈" in l:
+        cwr += 1
+kno = len(re.findall(u"◎原典", b))
+vf(u"四", u"升格卡區內 ◈ 須 0（未強行加注）", cwr == 0, u"%d 處" % cwr)
+vf(u"四", u"框架側 ◎原典 隨卡帶入（>100）", kno > 100, u"%d 見" % kno)
+vf(u"五", u"節級死鏈未掛標 0・殭標 0（已第八節量）", not untagged and stale == 0, u"未掛 %d／殭 %d" % (len(untagged), stale))
+five = [u"〔待寫", u"〔待校", u"〔指針已重算・待復核〕", u"歸章待裁", u"〔未裁"]
+zero = [k for k in five if BODY.count(k) == 0]
+vf(u"六", u"五種帳標於册身俱有實形（歸零者其條須改）", not zero, u"歸零：%s" % (u"、".join(zero) if zero else u"無"))
+vf(u"七", u"附錄七篇俱帶題名・總目錄由册身生", len(re.findall(u"^## 附錄[一二三四五六七八九十]+　", b, re.M)) == 7
+   and b.startswith(u"# 以遮衛性") and u"## 【本冊總目錄】" in b, u"7 篇・目錄在")
+vf(u"九", u"不立〔尼-波N〕為卡題", len(re.findall(r"^#{2,6} .*〔尼-波\d+〕", b, re.M)) == 0,
+   u"%d 題" % len(re.findall(r"^#{2,6} .*〔尼-波\d+〕", b, re.M)))
+CAR = re.compile(r"^#{3,5} 〔(遮|開|僧|補遺)")
+cls, pos = None, {"百則": [0, 0], u"補遺": [0, 0]}
+for l in L:
+    m = CAR.match(l)
+    if m:
+        cls = u"補遺" if m.group(1) == u"補遺" else u"百則"
+        pos[cls][0] += 1
+    elif l.startswith(u"**定位") and cls:
+        pos[cls][1] += 1
+    elif re.match(r"^#{1,5} ", l) and not CAR.match(l or u""):
+        cls = None
+vf(u"九", u"百則一百卡俱帶定位行・補遺十五則俱不帶（別有體例）",
+   pos[u"百則"] == [100, 100] and pos[u"補遺"][1] == 0,
+   u"百則 %d／帶 %d｜補遺 %d／帶 %d" % (pos[u"百則"][0], pos[u"百則"][1], pos[u"補遺"][0], pos[u"補遺"][1]))
+vf(u"十", u"舊本未動（已第六節以 SHA 證）", not any("舊本被動" in f for f in fails), u"SHA 全同")
 
 print("\n判定：%s" % ("合格（硬病 0）" if not fails else "不合格 %d 項：\n  - %s" % (len(fails), "\n  - ".join(fails))))
 sys.exit(1 if fails else 0)

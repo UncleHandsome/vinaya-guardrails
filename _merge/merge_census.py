@@ -70,7 +70,7 @@ p("定位行 全書／章外四條", "%d／%d" % (len(re.findall(r"^\*\*定位�
 p("原典 blockquote（> 《）", len(re.findall(r"^> 《", vtxt, re.M)))
 
 print("\n### 3 ver38 自帳諸數")
-for kw, lbl in [("133", "133 綁定台帳"), ("定位行", "『定位行』字样"), ("自算", "『自算』")]:
+for kw, lbl in [("133", "133 綁定台帳"), ("定位行", "『定位行』字樣"), ("自算", "『自算』")]:
     p(lbl + " 出現", vtxt.count(kw))
 p("第九章 存在", bool(re.search(r"^# 第九章", vtxt, re.M)))
 p("凡例第二節定名", re.search(r"### .*承諾六律", vtxt).group(0).strip() if re.search(r"### .*承諾六律", vtxt) else "查無")
