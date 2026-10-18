@@ -466,7 +466,7 @@ def cases_of(new_chap, _unused=None):
 
 
 # ── 護欄章之「非卡散文」（卡身連其標題一併挖去，不使兩出）───────────────────
-def hprose(num, before=None, after=None, cut=None):
+def hprose(num, before=None, after=None, cut=None, drop_sec=None):
     a, b = HL_SP[_k(num)][0], HL_SP[_k(num)][1]
     seg = hl.slice(a + 1, b)
     if before and before in seg:
@@ -475,6 +475,10 @@ def hprose(num, before=None, after=None, cut=None):
         seg = seg[seg.find(after):]
     if cut:
         seg = seg.split(cut)[0]
+    if drop_sec:
+        for title, i, e in hl.secs(a, b, 3):
+            if drop_sec in title:
+                seg = seg.replace(hl.slice(i, e), u"")
     for ordn, htitle, hp, hq, raw in P.hl_cases(hl, a, b):
         seg = seg.replace(raw, u"")
         seg = seg.replace(u"#### 案例%s：%s" % (P.cn_num(ordn), htitle), u"")

@@ -46,12 +46,10 @@ WORDS = [
     (u"附錄F-", u"附錄五・F-"), (u"附錄D", u"附錄五"), (u"附錄E", u"附錄五"), (u"附錄F", u"附錄五"),
     (u"附錄I-2", u"第五章"), (u"附錄I-1", u"第二十七章"), (u"附錄H-0", u"第十二章"), (u"附錄H", u"第十二章"),
     (u"附錄I", u"第二十七章"),
-    (u"卷末・工具箱第三節", u"第二十六章"), (u"卷末・工具箱第二節", u"第二十七章"),
-    (u"卷末・工具箱第四節", u"第二十六章"), (u"卷末・工具箱第五節", u"第二十八章"),
-    (u"卷末・工具箱", u"第二十六至二十八章"),
     (u"九章百則", u"全書諸案"), (u"百則判例", u"諸案判例"), (u"百則案例庫", u"判例之庫"),
     (u"百則底冊", u"判例之檔"), (u"百則編號", u"案例之名"), (u"百則", u"諸案"),
     (u"澈底", u"徹底"),
+    (u"物體脱離本處", u"物體脫離本處"),
 ]
 
 # ── 自報帳目・校勘痕跡之整行剷除 ───────────────────────────────────────────
@@ -345,6 +343,26 @@ LABELS = [(u"**【案發現場（制戒因緣）】：**", u"**制戒因緣**：
 LABEL_NUM = re.compile(u"【第([0-9]+)條 條文】：")
 
 
+TOOLBOX = [(u"卷末・工具箱第三節", u"第二十六章"), (u"卷末・工具箱第二節", u"第二十七章"),
+           (u"卷末・工具箱第四節", u"第二十六章"), (u"卷末・工具箱第五節", u"第二十八章"),
+           (u"卷末・工具箱", u"第二十六至二十八章")]
+
+
+def repoint_toolbox(text, stats):
+    """舊冊『卷末・工具箱』之指針改指新章，唯行於內文——結構標題自有其名，不受此改。"""
+    out = []
+    for l in text.split(u"\n"):
+        if l.startswith(u"#"):
+            out.append(l)
+            continue
+        for bad, good in TOOLBOX:
+            if bad in l:
+                stats["工具箱改指"] += l.count(bad)
+                l = l.replace(bad, good)
+        out.append(l)
+    return u"\n".join(out)
+
+
 def naturalize_labels(text, stats):
     t = text
     for bad, good in LABELS:
@@ -367,6 +385,7 @@ def apply_rules(text, stats, ref_fn=None, name_pairs=(), overrides=None):
             stats["指定改寫"] = stats.get("指定改寫", 0) + 1
             t = t.replace(bad, good)
     t = naturalize_labels(t, stats)
+    t = repoint_toolbox(t, stats)
     keep = []
     for l in t.split(u"\n"):
         if DING.match(l.strip()):
@@ -416,6 +435,9 @@ REGEX_REWRITE = [
     (re.compile(u"完整正理組合見[^；]*；"), u"完整正理組合見各案『佛陀處斷』之欄；"),
     (re.compile(u"複統攝案"), u"一案而貫數理者"),
     (re.compile(u"附錄三第三節出罪復權"), u"附錄五經論互證之出罪復權"),
+    # 指南模組二・八：『三印卡』之實還原為正式章節名（原題保留為副）
+    (re.compile(u"^(## 第[一二三四五六七八九十]+節　)法庭淨空、消磁與歸家$", re.M),
+     u"\\1結案與法庭消磁程序（法庭淨空與歸家之儀）"),
     (re.compile(u"並經校驗程序逐字比對；第三十八版統一口徑覆核後，[^；]*不再有部分案例為縮寫撮要之情形"),
      u"並經逐字比對；凡引號內之片段皆可回查得之，未復有縮寫撮要之情形"),
     (re.compile(u"今天，在第三十八版全書深度校勘與引文純淨化工程告一段落之際"), u"今天，全書校稿既畢"),

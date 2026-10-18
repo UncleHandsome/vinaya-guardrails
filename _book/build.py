@@ -85,7 +85,7 @@ def body_of(ch):
         j = [A.hch(u"三")]
     elif ch == u"第四章":
         j = [A.hch(u"四"), T.RULING_INTENT, A.vdaodu_part(u"動機審查主幹"),
-             A.vdaodu_part(u"八大正理總綱標尺"), A.vch(u"一")]
+             A.vdaodu_part(u"八大正理總綱標尺"), A.vminus(u"一", u"第一節")]
     elif ch == u"第五章":
         j = [A.vch(u"七", u"第一節"), A.vch(u"二"), A.vappx_sec(u"I", u"I-2")]
     elif ch == u"第六章":
@@ -97,7 +97,8 @@ def body_of(ch):
             hc = CASE_SRC[ch]
             cut = u"### 三、" if ch == u"第十五章" else None
             pre = A.hprose(hc, before=cut if ch == u"第十四章" else None,
-                           after=u"### 三、" if ch == u"第十五章" else None)
+                           after=u"### 三、" if ch == u"第十五章" else None,
+                           drop_sec=u"七滅諍" if ch == u"第十二章" else None)
             txt, n = A.cases_of(ch)
             j = [pre, txt] if n else [pre]
             if ch == u"第七章":
@@ -180,6 +181,14 @@ OVERRIDES += [
     (u"**「大貴價功德衣的處理方式最值得抄。** 面對", u"**「大貴價功德衣的處理方式最值得抄。」** 面對"),
     (u"凡標註 `◎原典` 者", u"凡冠『律藏原文』之目者"),
     (u"『復問：「從誰得耶？』報言", u"『復問：「從誰得耶？」』報言"),
+    (u"前章出公堂，入本章則唯即案而觀心。", u"公堂之制既明，入本章則唯即案而觀心。"),
+    (u"第五至第十一章與第十三至第十八章是案例最密之處，四章合計逾百案",
+     u"第七至第十三章與第十四至第十八章是案例最密之處，合計百有餘案"),
+    (u"再回頭讀該章的矩陣圖**；其餘條目俱已由篇末之歷條總表（唯全本有之）逐號登記",
+     u"再回頭讀該章的結構圖**；其餘條目俱已由卷末附錄三之歷條總表逐號登記"),
+    (u"唯篇末之歷條總表（唯全本有之）所收戒文不加粗體而仍是逐字，其例見該篇凡例。",
+     u"唯卷末附錄三之歷條總表所收戒文不加粗體而仍是逐字，其例見該表之表凡例。"),
+    (u"心中本無一張预设的方格", u"心中本無一張預設的方格"),
     (u"**六段式剛性結構**：每案嚴格遵奉『定位行 ＋ 事相經過 ＋ 心相照鏡 ＋ 佛陀處斷 ＋ 人間智慧 ＋ 文末原典』六段式規格，順序固定，各司其職。",
      u"**案例之六段**：每案依『事相經過・心相照鏡・法相剖析・佛陀處斷・人間智慧與行持・律藏原文』為序；有則著之，無則闕其名，不拘定式。"),
     (u"真正看錯想錯的人，在被叫住的一瞬間，心頭坦蕩，當場放手歸還。",
@@ -234,7 +243,7 @@ for pname, ptitle, chs in PARTS:
     O.append(u"# 【%s：%s】" % (pname, ptitle))
     for ch in chs:
         O.append(u"# %s　%s\n\n%s" % (ch, TITLES[ch], CH_BODY[ch]))
-O.append(u"# 【卷末・工具箱與附錄】（息・隨身法器與考據底冊）")
+O.append(u"# 【卷末・工具與附錄】（息・隨身法器與考據底冊）")
 O += TAIL
 book = u"\n\n".join(x for x in O if x and x.strip())
 
@@ -284,6 +293,14 @@ def make_toc(text):
 
 toc = make_toc(book)
 book = book.replace(u"# 【第一部：", toc + u"\n\n" + u"# 【第一部：", 1)
+
+# 册題清冊：產器自報其結構標題，尺據以核冊身——規則若誤傷標題，此處即對不上
+KEEP_H1 = re.compile(u"^# (第[一二三四五六七八九十]+章　|【第|【卷末|【全書路標|終卷|佛陀的護欄)")
+rows = [l.rstrip() for l in book.split("\n") if l.startswith(u"# ") and KEEP_H1.match(l)]
+rows += [l.rstrip() for l in book.split("\n") if re.match(u"^## 附錄[一二三四五]　", l)]
+io.open(os.path.join(HERE, u"册題清冊.tsv"), "w", encoding="utf-8", newline="\n").write(
+    "\n".join(rows) + "\n")
+
 io.open(OUT, "w", encoding="utf-8", newline="\n").write(book + u"\n")
 n = len(book.split("\n"))
 cjk = len(re.findall(u"[\\u3400-\\u9fff]", book))

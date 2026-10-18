@@ -150,15 +150,23 @@ HL_FIELD_RE = re.compile(r"^\*\s*\*\*【([^】]{2,18})】：\*\*(.*)$")
 
 
 def hl_cases(hl, chap_a, chap_b):
-    """某章內之案例卡 [(序, 題, {欄: 文}, 律文引)]。"""
+    """某章內之案例卡 [(序, 題, {欄: 文}, 律文引)]。
+
+    卡身之終界須止於下一個『不高於 H4』之標題——若算到章尾，末案即吞下章之後段論述，
+    散文再挖不淨，遂成兩出（第八章以下諸章之實測）。
+    """
     marks = []
     for i in range(chap_a, chap_b + 1):
         m = HL_CASE_RE.match(hl.lines[i - 1])
         if m:
             marks.append((i, m))
+    stops = [i for i in range(chap_a, chap_b + 1)
+             if re.match(r"^#{1,4} ", hl.lines[i - 1]) and not HL_CASE_RE.match(hl.lines[i - 1])]
     out = []
     for k, (i, m) in enumerate(marks):
-        e = (marks[k + 1][0] - 1) if k + 1 < len(marks) else chap_b
+        after = [j for j in stops if j > i]
+        nxt_case = marks[k + 1][0] if k + 1 < len(marks) else chap_b + 1
+        e = min([x - 1 for x in after] + [nxt_case - 1, chap_b])
         body = hl.slice(i + 1, e)
         parts, cur, buf, quotes = {}, None, [], []
         for l in body.split(u"\n"):

@@ -305,6 +305,24 @@ if badrows:
 if u"\x01" in book:
     bad(u"護符未收（\\x01 殘留）")
 
+# ── 九・册題之尺：結構標題須與產器自報之清冊一字不差（防規則誤傷標題）────
+MAN = os.path.join(HERE, u"册題清冊.tsv")
+if not os.path.exists(MAN):
+    bad(u"册題清冊佚（產器未出冊題，無從核標題）")
+else:
+    want = [l.rstrip() for l in io.open(MAN, encoding="utf-8").read().split("\n") if l.strip()]
+    have = set(l.rstrip() for l in BL if l.startswith(u"# ") or l.startswith(u"## 附錄"))
+    gone = [l for l in want if l not in have]
+    extra = [l for l in sorted(have) if l not in want and (
+        l.startswith(u"# 【") or l.startswith(u"# 第") or l.startswith(u"# 終卷")
+        or l.startswith(u"# 佛陀") or re.match(u"^## 附錄[一二三四五]　", l))]
+    if gone:
+        bad(u"册題失實（產器宣有而今無，疑被規則改動）：%s" % u"｜".join(x[:34] for x in gone[:5]))
+    if extra:
+        bad(u"册外之題（冊身多出產器未宣之結構標題）：%s" % u"｜".join(x[:34] for x in extra[:5]))
+    if not gone and not extra:
+        note(u"册題：%d 條結構標題與產器清冊一字不差" % len(want))
+
 # ── 十・出處閘門：自稱『律藏原文』者必冠卷段（凡例第三條之自證）──────────
 YUAN = re.compile(u"#### 律藏原文\n\n(.{0,3000}?)(?=\n#### |\n### |\Z)", re.S)
 yq = YUAN.findall(book)
@@ -479,6 +497,60 @@ if not dead_sec and not dead_name:
         len(re.findall(u"第[一二三四五六七八九十]+章第[一二三四五六七八九十]+節", book)),
         len(re.findall(u"第[一二三四五六七八九十]+章『[^』]{1,20}』案", book))))
 print(u"\n".join(u"✗ " + x for x in FAIL[-2:]) if (dead_sec or dead_name) else u"")
+
+# ── 十四・字形之齊（簡形唯許存在於引號之內——引號內原典一字不篡）────────
+try:
+    sys.path.insert(0, os.path.join(ROOT, u"_work"))
+    import _simpdict as SD
+    KEYS = set(SD.MAP) - set(u"于")      # 『于』乃漢譯與文言正字，非簡形
+    inq = []                             # 逐行標：是否處於跨行之引號內
+    deep = 0
+    for l in BL:
+        seg = re.sub(u"「[^」]*」|『[^』]*』", u"", l)
+        deep += l.count(u"「") - l.count(u"」") + len(re.findall(u"[「」]", l)) - len(re.findall(u"[「」]", seg))
+        inq.append(deep > 0)
+    stray = []
+    for idx, l in enumerate(BL, 1):
+        if l.startswith(u">") or inq[idx - 1]:
+            continue                     # 圍注與引文如實登載，不校字形
+        outside = re.sub(u"「[^」]*」|『[^』]*』", u"", l)
+        for ch in outside:
+            if ch in KEYS:
+                stray.append((idx, ch, SD.MAP[ch], l.strip()[:44]))
+                break
+    if stray:
+        bad(u"簡形字混入敘述文字 %d 行：%s" % (len(stray), u"｜".join(
+            u"L%d %s(當為%s)" % (n, a, b) for n, a, b, _ in stray[:5])))
+    else:
+        note(u"字形：敘述文字全用正體（引號內如實登載者不計）")
+except ImportError:
+    note(u"字形之檢未行（缺 _work/_simpdict.py）")
+
+# ── 十五・長段不兩出（同章重複為病，跨章重述只登於目）────────────────────
+def chap_at(n):
+    cur = u"（卷首末）"
+    for t, (a, b, sub) in CHAP.items():
+        if a <= n:
+            cur = t
+    return cur
+
+
+seen = collections.defaultdict(list)
+quoted = collections.defaultdict(list)
+for idx, l in enumerate(BL, 1):
+    t = norm(l)
+    if len(t) < 60:
+        continue
+    (quoted if l.lstrip().startswith(u">") or l.lstrip().startswith(u"「") else seen)[t[:40]].append(idx)
+same, cross = [], []
+for k, v in seen.items():
+    if len(v) < 2:
+        continue
+    (same if len(set(chap_at(x) for x in v)) == 1 else cross).append((k, v))
+if same:
+    bad(u"同章長段兩出 %d 組：例 L%s｜%s" % (len(same), same[0][1][:4], same[0][0][:22]))
+note(u"長段：同章兩出 %d 組（須零）・跨章重述 %d 組・同章同引（律文複引，屬當然）%d 組" % (
+    len(same), len(cross), sum(1 for k, v in quoted.items() if len(v) > 1)))
 
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
