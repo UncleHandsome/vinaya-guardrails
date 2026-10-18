@@ -368,21 +368,84 @@ for t, (a, b, sub) in CHAP.items():
 # ── 十三・附錄三戒本歷條：各篇之數須副其自宣（號段行按段計）─────────────
 ia = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
 ib = next((i for i in range(ia + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
-ap3 = u"\n".join(BL[ia:ib])
+secs = [(i, BL[i - 1]) for i in range(ia + 1, ib)
+        if BL[i - 1].startswith(u"### ") and (u"甲、" in BL[i - 1] or u"乙、" in BL[i - 1])]
 tot = 0
-for m in re.finditer(u"^## (甲、|乙、)(.+?)（戒本 (\\d+) 條(?:，律文別宣 (\\d+) 條)?(.*)?）$", ap3, re.M):
-    want = int(m.group(3))
-    s0 = m.end()
-    nxt = re.search(u"^## (甲、|乙、)", ap3[s0:], re.M)
-    blk = ap3[s0:s0 + (nxt.start() if nxt else len(ap3))]
-    got = 0
-    for r in re.finditer(u"^\\s*(\\d+)(?:[～~](\\d+))?\\.\\s", blk, re.M):
-        got += (int(r.group(2)) - int(r.group(1)) + 1) if r.group(2) else 1
-    tot += got
-    tag = m.group(2)[:16]
-    if got != want and not (m.group(4) or u""):
-        note(u"　戒本篇 %s：宣 %d 號・列 %d（其間共戒不別宣者依表例不重出）" % (tag, want, got))
-note(u"附錄三歷條：列舉之號共 %d（比丘 250・尼別宣 233・共 483 號之制）" % tot)
+for k, (i, h) in enumerate(secs):
+    w = re.search(u"戒本 (\\d+) 條", h)
+    if not w:
+        continue
+    want = int(w.group(1))
+    md = re.search(u"其第(\\d+)[～~](\\d+)號與前部共戒", h)
+    ded = (int(md.group(2)) - int(md.group(1)) + 1) if md else (1 if u"其第1號與前部共戒" in h else 0)
+    end = secs[k + 1][0] - 1 if k + 1 < len(secs) else ib
+    have = set()
+    for l in BL[i:end]:
+        r = re.match(u"^\\s*(\\d+)(?:[～~](\\d+))?\\.\\s", l)
+        if not r:
+            continue
+        if r.group(2):
+            have.update(range(int(r.group(1)), int(r.group(2)) + 1))
+        else:
+            have.add(int(r.group(1)))
+    tot += len(have)
+    if len(have) != want:
+        bad(u"戒本篇 %s：宣 %d 號・列 %d（缺 %s）" % (h[4:26], want, len(have),
+            u",".join(str(x) for x in sorted(set(range(1, want + 1)) - have)[:10])))
+note(u"附錄三歷條：逐篇核其自宣（12 篇），共列 %d 號（比丘 250・尼別宣 233・通數 483 之制）" % tot)
+
+
+# ── 十一・引號之闭合（律文原樣登載者不計・新冊不得自造破口）──────────────
+IA3 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
+IB3 = next((i for i in range(IA3 + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
+NL = chr(10)
+OFF3 = book.index(NL.join(BL[IA3:IB3])) if IA3 else -1
+OFF4 = book.index(NL.join(BL[IB3 - 1:IB3])) if IB3 < len(BL) else len(book)
+
+
+def walk(op, cl, nm, allow_zone=None):
+    st, miss = [], []
+    for i, c in enumerate(book):
+        if c == op:
+            st.append(i)
+        elif c == cl:
+            if st:
+                st.pop()
+            else:
+                miss.append((u"多闭合", i))
+    miss += [(u"未闭合", x) for x in st]
+    for kind, i in miss:
+        ln = book[:i].count(NL) + 1
+        txt = u"%s%s L%d：%s" % (nm, kind, ln, book[max(0, i - 40):i + 26].replace(NL, " "))
+        if allow_zone and allow_zone[0] <= i <= allow_zone[1]:
+            note(u"　引號例外（律文原樣登載）：%s" % txt)
+        else:
+            bad_(txt)
+    return len(miss)
+
+
+bad_ = []
+
+
+def bad_(txt):
+    FAIL.append(u"引號破口・" + txt)
+
+
+zone = (OFF3, OFF4) if OFF3 >= 0 else None
+for op, cl, nm in [(u"「", u"」", u"方引號"), (u"『", u"』", u"雙引號"), (u"〔", u"〕", u"六角")]:
+    walk(op, cl, nm, zone)
+if not any(x.startswith(u"引號破口") for x in FAIL):
+    note(u"引號之闭合：除附錄三律文原樣登載者外，俱合")
+
+# ── 十二・節號一制（章內 H2 須自一連貫・形制唯一）────────────────────────
+for t, (a, b, sub) in CHAP.items():
+    js = [m.group(1) for m in re.finditer(u"^## 第([一二三四五六七八九十]+)節", u"\n".join(BL[a:b]), re.M)]
+    ns = [m.group(1) for m in re.finditer(u"^## ([一二三四五六七八九十]+)、", u"\n".join(BL[a:b]), re.M)]
+    if js and ns:
+        bad(u"%s 節號兩制並存（第N節 %d・裸序 %d）" % (t, len(js), len(ns)))
+    if js and [P.cnum(x) for x in js] != list(range(1, len(js) + 1)):
+        bad(u"%s 節號不連貫：%s" % (t, js))
+
 
 
 # ── 九・節級與名級死鏈（章在而節無・案名不屬其章）──────────────────────────
