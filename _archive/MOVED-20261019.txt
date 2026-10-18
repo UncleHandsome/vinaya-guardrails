@@ -1,0 +1,20 @@
+# 搬移清冊 MOVED-20261019
+
+緣起：奉令廢舊合編本、依《全新合編修正指南》四回重做新冊《佛陀的護欄：四分律行為心理學與現代僧伽治理》。
+舊合編本之產器与驗尺皆綁舊口徑（一百基準・133 台帳・定位行・〔待寫〕之帳），新冊既不用其制，故逐名移入 `_archive/一次性/舊合編/`，不留原地以免兩套真相打架。
+法則：逐名列檔，不用前綴通配；新產器已不 import 此目錄（`_book/refmap.py` 自代 `_merge/chapmap.py`）。
+復原：每行作 `源 <TAB> 的`，可逐枚原路搬回。
+
+_merge\merge_build.py	_archive\一次性\舊合編\merge_build.py
+_merge\merge_check.py	_archive\一次性\舊合編\merge_check.py
+_merge\merge_census.py	_archive\一次性\舊合編\merge_census.py
+_merge\refnum.py	_archive\一次性\舊合編\refnum.py
+_merge\refnum_negtest.py	_archive\一次性\舊合編\refnum_negtest.py
+_merge\pair_build.py	_archive\一次性\舊合編\pair_build.py
+_merge\chapmap.py	_archive\一次性\舊合編\chapmap.py
+_merge\depath.py	_archive\一次性\舊合編\depath.py
+_merge\depath2.py	_archive\一次性\舊合編\depath2.py
+_merge\precommit.py	_archive\一次性\舊合編\precommit.py
+_merge\sanitize.py	_archive\一次性\舊合編\sanitize.py
+_merge\掛載表.tsv	_archive\一次性\舊合編\掛載表.tsv
+_merge\對位表.tsv	_archive\一次性\舊合編\對位表.tsv
