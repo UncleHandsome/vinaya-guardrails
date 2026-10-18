@@ -224,5 +224,38 @@ for i in range(len(L) - W):
     seen.setdefault(k, i)
 p("整塊重出（24 行窗・相距逾一窗）", "0（未報即無）" if not any("整塊" in f for f in fails) else "見上")
 
+print("\n=== 10 目錄・附錄（目次須由册身生，不可另抄一份）===")
+ti = next((i for i, l in enumerate(L) if l.startswith(u"## 【本冊總目錄】")), None)
+if ti is None:
+    fails.append("缺【本冊總目錄】")
+    p("本冊總目錄", "★無")
+else:
+    t_end = next((i for i in range(ti + 1, len(L)) if L[i].strip() == u"---"), len(L))
+    raw = [l for l in L[ti + 1:t_end] if l.lstrip().startswith((u"-", u"**"))]
+    tc = [l[2:].strip() for l in raw if l.startswith(u"- ")]
+    td = [l.strip().strip(u"*").strip() for l in raw if l.startswith(u"**")]
+    ta = [l.strip()[2:].strip() for l in raw if l.startswith(u"  - ")]
+    tc = [x for x in tc if not x.startswith(u"附錄")]
+    ac = [re.sub(r"^# ", "", l) for l in L if re.match(r"^# 第[一二三四五六七八九十]+章　", l)]
+    ad = [re.sub(r"^# ", "", l) for l in L if re.match(r"^# 【第[一二三四五六七八九十]+部：", l)] + \
+         [re.sub(r"^# ", "", l) for l in L if l.startswith(u"# 【卷末")]
+    aa = [re.sub(r"^## ", "", l) for l in L if re.match(r"^## 附錄[一二三四五六七八九十]+　", l)]
+    bare = [l for l in L if re.match(r"^## 附錄[一二三四五六七八九十]+[^　]", l)]
+    p("章・目次／册身", "%d／%d　%s" % (len(tc), len(ac),
+      "全合" if tc == ac else "★不合：%s" % (set(tc) ^ set(ac))))
+    p("部・目次／册身", "%d／%d　%s" % (len(td), len(ad), "全合" if sorted(td) == sorted(ad) else "★不合"))
+    p("附錄・目次／册身（須帶題名）", "%d／%d　%s" % (len(ta), len(aa),
+      "全合" if sorted(ta) == sorted(aa) else "★不合"))
+    p("光板附錄題（只有編號無題名，須 0）", len(bare))
+    if tc != ac or sorted(td) != sorted(ad) or sorted(ta) != sorted(aa):
+        fails.append("目錄與册身不合")
+    if bare:
+        fails.append("附錄無題名 %d 篇" % len(bare))
+    old = [i for i, l in enumerate(L) if re.match(r"^#{3,4} [^\n]*目錄】$", l) and u"本冊總目錄" not in l]
+    unl = [i for i in old if not any(u"〔存檔" in L[j] for j in range(i + 1, min(i + 5, len(L))))]
+    p("舊冊自錄之存檔按（應 2／未標須 0）", "%d／%d" % (len(old), len(unl)))
+    if unl:
+        fails.append("舊冊目錄未標存檔 %d 處" % len(unl))
+
 print("\n判定：%s" % ("合格（硬病 0）" if not fails else "不合格 %d 項：\n  - %s" % (len(fails), "\n  - ".join(fails))))
 sys.exit(1 if fails else 0)

@@ -576,15 +576,22 @@ w(u"## 工具箱　隨身操作（框架第八章原樣帶入）〔指針已重�
 w(u"")
 w(vslice(u"第八章"))
 w(u"")
-for k, t in [("附錄一", "A"), ("附錄二", "B"), ("附錄三", None), ("附錄四", None),
-             ("附錄五", "J"), ("附錄六", None)]:
-    w(u"## %s" % k)
+APX = [(u"附錄一", u"宗門心法——禪案與自性觀照輯要", u"A"),
+       (u"附錄二", u"極限情境壓力測試矩陣", u"B"),
+       (u"附錄三", u"總表與終極壓縮——宏觀檢索樞紐・生命之樹生態全景", u"第七章"),
+       (u"附錄四", u"全戒本歷條總表（比丘 250・尼 233・共 483 號）", u"護欄附錄"),
+       (u"附錄五", u"現代深水案例補遺（研讀備查，不計入百則）", u"J"),
+       (u"附錄六", u"術語對照・原典出處・經論互證三表（框架附錄 D・E・F）", u"DEF")]
+SRCN = {u"A": u"框架附錄A", u"B": u"框架附錄B", u"J": u"框架附錄J", u"DEF": u"框架附錄D・E・F",
+        u"第七章": u"框架第七章", u"護欄附錄": u"護欄冊原附錄"}
+for k, tt, t in APX:
+    w(u"## %s　%s（源：%s）〔指針已重算・待復核〕" % (k, tt, SRCN[t]))
     w(u"")
-    if t:
+    if t in V_APX:
         w(demote(relink(strip_h1("\n".join(vlines[V_APX[t][0] - 1:V_APX[t][1]]).rstrip()), "v"), 1))
-    elif k == u"附錄三":
+    elif t == u"第七章":
         w(demote(relink(strip_h1("\n".join(vlines[V_CHAP[u"第七章"][0] - 1:V_CHAP[u"第七章"][1]]).rstrip()), "v"), 1))
-    elif k == u"附錄四":
+    elif t == u"護欄附錄":
         w(demote(relink(strip_h1("\n".join(hlines[H_APX - 1:len(hlines)]).rstrip()), "h"), 1))
     else:
         for x in ("D", "E", "F"):
@@ -592,7 +599,7 @@ for k, t in [("附錄一", "A"), ("附錄二", "B"), ("附錄三", None), ("附�
     w(u"")
     w(u"---")
     w(u"")
-w(u"## 附錄七（合編新增・須裁）　框架隨冊之附錄 I（H 已入第十二・十三章）")
+w(u"## 附錄七　現代治理與認知科學跨域對照總收攏（源：框架附錄I・合編新增・須裁）〔指針已重算・待復核〕")
 w(u"")
 w(u"〔未裁：指南六大附錄未列框架之 H・I 兩篇。本篇（I，389 行／11,101 字）如實全數帶入；"
   u"H 之補遺十五則已入第十二章第三節，H 其餘部分隨冊帶入第十三章末——削與留須奉裁。〕")
@@ -614,7 +621,51 @@ def tag_dead_refs(text):
     return out
 
 
+def add_toc(text):
+    """機器自册身實題生成【本冊總目錄】，插在卷首凡例之後、兩節舊目錄之前。
+    法則：目錄只由 H1／H2 生成，故改册必改目——不留手工目錄可腐。"""
+    items = []
+    for l in text.split("\n"):
+        if re.match(r"^# 【第[一二三四五六七八九十]+部：", l) or l.startswith(u"# 【卷末"):
+            items.append((1, l[2:].strip()))
+        elif re.match(r"^# 第[一二三四五六七八九十]+章　", l):
+            items.append((2, l[2:].strip()))
+        elif re.match(r"^## 附錄[一二三四五六七八九十]+　", l):
+            items.append((3, l[3:].strip()))
+    toc = [u"## 【本冊總目錄】（機器由册身實題生成・改册即改目）", u"",
+           u"> 〔按：卷首甲・乙兩節之內另載**兩本舊冊之原目錄**，只作文獻存檔，其章次節次已隨合編改易，"
+           u"勿據以索驥；本冊七部二十八章之目次唯此目錄是憑。〕", u""]
+    for lv, t in items:
+        if lv == 1:
+            toc += [u"", u"**%s**" % t, u""]
+        elif lv == 2:
+            toc.append(u"- %s" % t)
+        else:
+            toc.append(u"  - %s" % t)
+    toc.append(u"")
+    anchor = u"### 甲・框架冊卷首"
+    i = text.find(anchor)
+    print("總目錄：%d 目（部 %d／章 %d／附錄 %d）" % (len(items),
+          sum(1 for x in items if x[0] == 1), sum(1 for x in items if x[0] == 2),
+          sum(1 for x in items if x[0] == 3)))
+    return (text[:i] + "\n".join(toc) + u"\n\n---\n\n" + text[i:]) if i > 0 else text
+
+
+def mark_old_toc(text):
+    """兩本舊冊之自錄既帶入卷首，須就地標明『存檔・非本冊之目』——否則目錄冒充目錄。"""
+    n = [0]
+
+    def one(m):
+        n[0] += 1
+        return (m.group(0) + u"\n\n> 〔存檔：此乃%s之原目錄・非本冊目次；"
+                u"本冊之目見卷首【本冊總目錄】。〕" % (u"框架冊" if u"開卷標準目錄" in m.group(0) else u"護欄冊"))
+
+    return re.sub(u"^#{3,4} [^\\n]*目錄】$", lambda m: one(m), text, flags=re.M), n[0]
+
+
 book = normalize_h1(book)
+book = add_toc(book)
+book, OLD_TOC = mark_old_toc(book)
 book = tag_dead_refs(book)
 io.open(OUT, "w", encoding="utf-8", newline="\n").write(book + "\n")
 print("產出：%s" % OUT)
@@ -624,7 +675,7 @@ print("行 %d｜漢字 %d｜章 %d｜待寫 %d｜待校 %d｜指針待改 %d｜�
     book.count(u"〔待寫"), book.count(u"〔待校"), book.count(u"〔指針已重算・待復核〕"), book.count(u"〔未裁")))
 print("指針重算：%s" % ("｜".join("%s %d" % (k, v) for k, v in relink_stat.items())))
 print("附錄H 挖代之補遺卡：%d 張（須與補遺總數相符，否則有雙出）" % CUT_BUYI[0])
-print("框架第六章原卷首搬入：%d 字" % CUT_V6[0])
+print("框架第六章原卷首搬入：%d 字｜舊冊自錄標存檔：%d 處" % (CUT_V6[0], OLD_TOC))
 print("框架卡安置：%d／115（補遺 %d）" % (
     len(CARD_HOME), sum(1 for k, v in CARD_HOME.items() if k.startswith(u"〔補遺"))))
 from collections import Counter as _C
