@@ -7,6 +7,7 @@ __pycache__/
 _print/*
 !_print/build38.py
 !_print/build_hulan.py
+!_print/build_book.py
 !_print/verify38.py
 !_print/verify_hulan.py
 !_print/print38.css

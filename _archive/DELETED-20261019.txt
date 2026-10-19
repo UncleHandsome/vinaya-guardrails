@@ -8,3 +8,9 @@
 '兩書合編企畫審查與實作規劃.md'（舊合編之指南審查記錄，其結論已落於新冊規則，不留第二份真相）
 
 唯兩本舊源冊 `_archive/舊本/` 一字不動，仍為新冊唯一之取材處（只讀）。
+2026-10-19 清場（可再生者，依 .gitignore 之政策）：
+__pycache__ ×5（./, _book/, _merge/, _print/, _work/ 共約 300 支 .pyc／約 2.3 MB）
+_work/b.log（gitignore 所列執行期日誌）
+_print/merge_build.log（作廢之舊合編本建冊日誌）
+_print/_verify38.txt（可重建之驗收報）
+留：_work/hlface.last（工具之狀態檔，入庫者）・_archive/verify35_run.log（入庫之舊報，刪須另命）
