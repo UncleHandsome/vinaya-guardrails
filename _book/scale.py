@@ -239,8 +239,8 @@ for _l in L:
             debt += 1
 LED = os.path.join(ROOT, u"_book", u"款級待裁.txt")
 if debt:
-    note.append(u"尺九 【債】款級死指 %d 條在册（帳：%s）——該節實無此序之款，或彼章本非所指；"
-                u"機械降級則錯章保留，改章則屬臆推，故留原樣候親裁"
+    note.append(u"尺九 【債】款級死指 %d 條在册（可裁之表：款級待裁.tsv・帳：%s）——該節實無此序之款，"
+                u"或彼章本非所指；機械降級則錯章保留，改章則屬臆推，故留原樣候親裁"
                 % (debt, os.path.basename(LED)))
 elif not os.path.exists(LED):
     note.append(u"尺九 款級之賬：指針序號俱有其靶，債帳已銷")
