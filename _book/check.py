@@ -944,6 +944,38 @@ if x42:
 else:
     note(u"節題之數：案例解碼諸節之題不帶案數（帶者俱與實案合）")
 
+# ── 四三・目錄之賬：冊身之章・節・附錄・終卷，目錄須一一俱列且無虛列 ───────
+ti = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 【本書總目錄】")), 0)
+tj = next((i for i in range(ti + 1, len(BL)) if BL[i - 1].startswith(u"# ")), len(BL))
+toc_chap, toc_sec = [], []
+for l in BL[ti:tj - 1]:
+    if l.startswith(u"    - "):
+        toc_sec.append(l[6:].strip())
+    elif l.startswith(u"- ") and re.match(u"第[一二三四五六七八九十]+章", l[2:]):
+        toc_chap.append(l[2:].strip())
+fence, inch, b_chap, b_sec = False, False, [], []
+for i in range(tj - 1, len(BL)):
+    l = BL[i]
+    if l.startswith(u"```"):
+        fence = not fence
+        continue
+    if fence:
+        continue
+    if re.match(u"^# 第[一二三四五六七八九十]+章　", l):
+        b_chap.append(l[2:].strip())
+        inch = True
+    elif l.startswith(u"# "):
+        inch = False
+    elif inch and l.startswith(u"## "):
+        b_sec.append(l[3:].strip())
+miss = [x for x in b_chap if x not in toc_chap] + [x for x in b_sec if x not in toc_sec]
+ghost = [x for x in toc_chap + toc_sec if x not in b_chap + b_sec]
+if miss or ghost:
+    bad(u"目錄不副冊身：漏列 %d（例：%s）・虛列 %d（例：%s）" % (
+        len(miss), (miss[0][:22] if miss else u""), len(ghost), (ghost[0][:22] if ghost else u"")))
+else:
+    note(u"目錄之賬：章 %d・節 %d 俱列，無漏無虛（改書即改目，目與身同一源）" % (len(b_chap), len(b_sec)))
+
 # ── 卅九・六段之齊：每案俱立『心相照鏡』，其機位純為第二人稱，所引之語不虛出 ──
 no_mir, no_you, invented = [], [], []
 for i, l in enumerate(BL, 1):

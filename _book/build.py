@@ -836,6 +836,7 @@ print(u"款級親定：%d 條（候選不唯一者，立此存證，仍繙尺核
 def make_toc(text):
     out = [u"## 【本書總目錄】（由書身實題生成・改書即改目）", u""]
     fence = False
+    in_chap = False
     for l in text.split(u"\n"):
         if l.startswith(u"```"):
             fence = not fence
@@ -846,12 +847,20 @@ def make_toc(text):
         if m:
             out.append(u"")
             out.append(u"**%s**" % m.group(1))
+            in_chap = False
             continue
         m = re.match(r"^# (第[一二三四五六七八九十]+章　.+)$", l)
         if m:
             out.append(u"- %s" % m.group(1))
-        elif l.startswith(u"# 終卷") or re.match(r"^## 附錄[一二三四五]", l):
+            in_chap = True
+        elif l.startswith(u"# 終卷"):
             out.append(u"- %s" % l.lstrip("# "))
+            in_chap = False
+        elif l.startswith(u"## 附錄"):
+            out.append(u"- %s" % l[3:])
+            in_chap = False
+        elif in_chap and l.startswith(u"## "):
+            out.append(u"    - %s" % l[3:])
     return u"\n".join(out)
 
 
