@@ -17,7 +17,14 @@
 import io
 import os
 import re
+import unicodedata
 from collections import Counter
+
+DROPCH = set(u" \t、，。：:；;（）()「」『』“”‘'\"/／-—─│·・.!?？…*#|【】《》〇")
+
+
+def key(s):
+    return u"".join(c for c in unicodedata.normalize("NFKC", s) if c not in DROPCH)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, u"佛陀的護欄_重構版.md")
@@ -374,6 +381,39 @@ if x12:
     bad.append(u"尺十二 條案互證不合 %d 處（正文所系之章案與台帳異）" % x12)
 else:
     note.append(u"尺十二 條案互證：%d 對『條號↔案例』俱與台帳相合（段內為界，篇聚從標）" % c12)
+
+# ── 尺十三 名相系案（段內所引『X戒』專名須見於所靶之案）──────
+TIT = {}
+_c = 0
+for _l in L:
+    m = re.match(u"^# 第([一二三四五六七八九十]+)章", _l)
+    if m:
+        _c = cnum(m.group(1))
+        continue
+    m = re.match(u"^### 案例([一二三四五六七八九十百]+)：(.*)$", _l)
+    if m and _c:
+        TIT[(_c, cnum(m.group(1)))] = m.group(2)
+P13 = re.compile(u"第([一二三四五六七八九十]+)章案例([一二三四五六七八九十百]+)[：:]\s*([一-鿿]{3,14}?戒)")
+x13 = 0
+c13 = 0
+for _i, _l in enumerate(L, 1):
+    if _l.startswith(u"# ") or _l.startswith(u"### 案例"):
+        continue
+    for m in P13.finditer(_l):
+        t = (cnum(m.group(1)), cnum(m.group(2)))
+        nm = m.group(3)
+        if t not in TIT:
+            continue
+        c13 += 1
+        if key(nm) in key(TIT[t]):
+            continue
+        alt = [k for k, v in TIT.items() if key(nm) in key(v)]
+        if alt:                                    # 專名他案獨見＝錯系；四處皆無者是修辭語，不判
+            x13 += 1
+if x13:
+    bad.append(u"尺十三 名相錯系 %d 處（所引『X戒』見於他案而不見於所靶之案）" % x13)
+else:
+    note.append(u"尺十三 名相系案：%d 對『X戒↔案例』俱無他案獨見之錯系" % c13)
 
 print(u"\n".join(u"  ✓ " + x for x in note))
 print(u"病 %d 目" % len(bad))
