@@ -187,8 +187,15 @@ for t, items in A.PLAN.items():
             placed_fw.add(code)
 for key in A.CASE_MAP:
     placed_fw.discard(None)
-if len(placed_fw) != 115:
-    bad(u"框架卡入冊 %d ≠ 115" % len(placed_fw))
+if len(placed_fw) != 115 - len(A.FW_MERGE):
+    bad(u"框架卡入冊 %d ≠ %d（115・真合併 %d 對）" % (len(placed_fw), 115 - len(A.FW_MERGE), len(A.FW_MERGE)))
+for _m, _d in A.FW_MERGE.items():
+    if _m not in placed_fw:
+        bad(u"真合併之主案未入冊：%s" % _m)
+    if _d in placed_fw:
+        bad(u"真合併之併案仍自立一案：%s" % _d)
+    if _d not in A.CODE_LOC:
+        bad(u"併案之碼無落點（指針必成孤碼）：%s" % _d)
 if len(A.CASE_MAP) != 164:
     bad(u"護欄案入冊 %d ≠ 164" % len(A.CASE_MAP))
 note(u"清冊：案例 %d 案（框架 115・護欄 164・同案合一 %d）" % (total_case, fused))
@@ -845,6 +852,37 @@ elif dead37:
     bad(u"校勘記落點死鏈 %d 條：%s" % (len(dead37), u"／".join(dead37[:4])))
 else:
     note(u"夾注之遷：正文（含卷首）〔案：〕0 行，卷末校勘記 %d 條，落點俱活" % len(recs))
+
+# ── 卅八・真合併之果：一案之內二判俱存、敘事不再兩出 ─────────────────────
+def tri38(s):
+    s = norm(s)
+    return set(s[i:i + 3] for i in range(max(0, len(s) - 2)))
+
+for _m, _d in A.FW_MERGE.items():
+    ttl = A.MERGE_TITLE[_m]
+    mt = re.search(u"(?m)^### 案例[一二三四五六七八九十]+：" + re.escape(ttl) + u"$", book)
+    if not mt:
+        bad(u"真合併：主案之新題不可見（%s）" % ttl[:18])
+        continue
+    nxt = re.search(u"(?m)^(### |## |# )", book[mt.end():])
+    blk = book[mt.start(): mt.end() + (nxt.start() if nxt else 0)]
+    caps = [c for c in A.MERGE_CAPS.get(_m, ()) if c in blk]
+    if len(caps) < 2:
+        bad(u"真合併 %s：二判之題只存 %d（治理正理須兩存）" % (ttl[:14], len(caps)))
+    nar = re.search(u"^#### 事相經過\\n\\n(.*?)\\n\\n#### ", blk, re.S | re.M)
+    dups = []
+    if nar:
+        sents = [x.strip() for x in re.split(u"(?<=[。！？])", nar.group(1)) if len(tri38(x)) > 8]
+        for a1 in range(len(sents)):
+            for b1 in range(a1 + 1, len(sents)):
+                ta, tb = tri38(sents[a1]), tri38(sents[b1])
+                if len(ta & tb) * 10 > min(len(ta), len(tb)) * 7:
+                    dups.append(u"%s‖%s" % (sents[a1][:12], sents[b1][:12]))
+    if dups:
+        bad(u"真合併 %s：敘事仍兩出 %d 對：%s" % (ttl[:14], len(dups), u"／".join(dups[:2])))
+    else:
+        note(u"真合併：%d 對卡合為一案（二判俱存・敘事無兩出）——%s" % (
+            len(A.FW_MERGE), ttl[:20]))
 
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:

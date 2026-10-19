@@ -308,6 +308,114 @@ MOD_ITEM = re.compile(u"^\\s*[0-9]+[.、]\\s*\\*\\*現代(?:對應|對讀)[^*\\n
                       u"(?=\\n\\s*[0-9]+[.、]\\s*|\\Z)", re.M | re.S)
 NARR_VERB = re.compile(u"^(把|自|將|以|看|聽|貪|瞋|癡|慢|疑|惧|恐|逐|求|爭|執|守|掩|藏|隱|規|避|"
                        u"託|藉|憑|恃|挾|營|圖|算|計|怨|恨|責|諂|誑|覆|掉|散|怠|放|認|見|聞|知|受|想|行|做|作|說|言|動|起|犯|修|持|犯)")
+# ── 奉令①・真合併：同一因緣之兩卡合為一案（敘事不兩出，治理正理兩存）──
+FW_MERGE = {u"〔開24〕": u"〔僧15〕"}
+MERGE_TITLE = {u"〔開24〕": u"涅槃日之二態——眼淚藏不住修為，狂言逼出結集"}
+MERGE_CAPS = {u"〔開24〕": (u"未離欲者哀慟之判", u"跋難陀狂言之判")}
+MERGE_CUT = {u"〔開24〕": u"爾時有跋難陀"}   # 併案引文取其所獨出之部分（其前與主案同段，省以『……』）
+
+
+def tidy(x):
+    return re.sub(u"\\s*\\n?---\\s*$", u"", (x or u"").strip()).strip()
+
+
+def novel_sents(main_text, para):
+    """段內逐句核：主案已有之句不復重出——『刪敘事』至此方落得實處。"""
+    have = tri(main_text)
+    out, kept = [], 0
+    for s in re.split(u"(?<=[。！？])", para):
+        if not s.strip():
+            continue
+        t = tri(s)
+        if t and len(t - have) * 2 <= len(t):
+            continue
+        out.append(s)
+        have |= t
+        kept += 1
+    return u"".join(out).strip(), kept
+
+
+def tri(s):
+    s = re.sub(u"[^\\u3400-\\u9fff]", u"", s or u"")
+    return set(s[i:i + 3] for i in range(max(0, len(s) - 2)))
+
+
+def novel(paras, new):
+    """併案之段與主案已有之段較其三元重疊：過半則同其敘事，棄之。"""
+    have = set()
+    for p in paras:
+        have |= tri(p)
+    t = tri(new)
+    return bool(t) and len(t - have) * 2 > len(t)
+
+
+def dup_body(code):
+    """併案之欄：依新冊式樣取出（只取框架卡所有之欄，不增一法）。"""
+    f = CARDS[code][u"fields"]
+    out = {}
+    v = relink(f.get(u"事相經過", u""), u"v").strip()
+    if v:
+        out[u"事相經過"] = v
+    mir, _ok = to_second(relink(f.get(u"心相照鏡", u""), u"v"))
+    if mir.strip():
+        out[u"心相照鏡"] = mir.strip()
+    for k, fk in ((u"佛陀處斷", u"佛陀處斷"), (u"人間智慧與行持", u"人間智慧"), (u"律藏原文", u"律藏原文")):
+        w = relink(f.get(fk, u""), u"v").strip()
+        if w:
+            out[k] = w
+    return out
+
+
+def fold_merge(body, fw_code):
+    """主案既成，併案之欄歸一處：敘事去重、判語分其二題、餘欄並列。"""
+    dp = dup_body(FW_MERGE[fw_code])
+    cap1, cap2 = MERGE_CAPS.get(fw_code, (u"主判", u"併判"))
+    n = 0
+    if u"事相經過" in dp:
+        ps = [p for p in body.get(u"事相經過", u"").split(u"\n\n") if p.strip()]
+        add, drop = [], []
+        for p in dp[u"事相經過"].split(u"\n\n"):
+            if not p.strip():
+                continue
+            if not novel(ps, p):
+                drop.append(p)
+                continue
+            head = p[:p.index(u"\n")] if u"\n" in p else u""
+            rest, kept = novel_sents(body.get(u"事相經過", u""), p[len(head):] if head else p)
+            tot = len([1 for s in re.split(u"(?<=[。！？])", (p[len(head):] if head else p)) if s.strip()])
+            SENT[u"merge_drop"] += max(0, tot - kept) + (1 if not kept else 0)
+            if not kept:
+                drop.append(p)
+                continue
+            add.append((head + u"\n" + rest if head else rest).strip())
+        SENT[u"merge_drop"] += len(drop)
+        if add:
+            body[u"事相經過"] = u"\n\n".join(ps + add).strip()
+            n += len(add)
+    if dp.get(u"佛陀處斷") and body.get(u"佛陀處斷"):
+        body[u"佛陀處斷"] = u"**%s**\n\n%s\n\n**%s**\n\n%s" % (
+            cap1, tidy(body[u"佛陀處斷"]), cap2, tidy(dp[u"佛陀處斷"]))
+        n += 1
+    for k in (u"心相照鏡", u"人間智慧與行持"):
+        if dp.get(k):
+            body[k] = (tidy(body.get(k, u"")) + u"\n\n" + tidy(dp[k])).strip()
+            n += 1
+    if dp.get(u"律藏原文"):
+        q = tidy(dp[u"律藏原文"])
+        cut = MERGE_CUT.get(fw_code)
+        if cut:
+            j = q.find(cut)
+            if j > 0:
+                s = max(q.rfind(u"。", 0, j), q.rfind(u"』", 0, j)) + 1
+                k2 = q.rfind(u"\n> ", 0, j)
+                if k2 > 0 and s > k2:
+                    q = q[:k2] + u"\n> 「……" + q[s:]
+        tgt = u"律藏原文" if body.get(u"律藏原文") else (
+            u"戒文（戒本次第）" if body.get(u"戒文（戒本次第）") else u"律藏原文")
+        body[tgt] = (tidy(body.get(tgt, u"")) + u"\n\n" + q).strip()
+        n += 1
+    SENT[u"merge_fold"] += n
+    return n
 MIRROR_LEAD = [u"你且自照：", u"你照此心：", u"你當自問：", u"你——"]
 ML = [0]
 NO_PREFIX = re.compile(u"^(這|那|此|其|所|是|一|凡|若|但|而|且|又|或|故|蓋|夫|唯|莫|無|不|每|真正|一切)")
@@ -405,6 +513,10 @@ def render_case(idx, title, fw_code, hl_case):
     shield = relink(u"\n\n".join(v for k, v in hp.items() if u"防禦靶點" in k), u"h")
     if fw_code and CARDS[fw_code].get(u"正理"):
         shield = (shield + u"\n\n" if shield else u"") + u"**正理參照**：" + CARDS[fw_code][u"正理"]
+    if fw_code in FW_MERGE:
+        fold_merge(body, fw_code)
+    if fw_code in MERGE_TITLE:
+        title = MERGE_TITLE[fw_code]
     t = [u"### 案例%s：%s" % (P.cn_num(idx), title)]
     for key in SEC_LABEL:
         txt = body.get(key, u"").strip()
@@ -426,7 +538,7 @@ def render_case(idx, title, fw_code, hl_case):
 
 WIS_LEAD = [u"我們共勉：", u"我們同道共勉：", u"我們同勘此心：", u"我們且共勉："]
 SENT = {u"second_ok": 0, u"second_missing": 0, u"case": 0, u"fw_only": 0, u"hl_only": 0,
-        u"mirror_fill": 0}
+        u"mirror_fill": 0, u"merge_fold": 0, u"merge_drop": 0}
 USED_FW = set()
 
 
@@ -435,6 +547,8 @@ PLAN = {}          # 新章 → [(標題, 框架碼 or None, 護欄案 or None)]
 
 def _plan(new_chap, hl_src_chap):
     items = []
+    for _m, _d in FW_MERGE.items():
+        USED_FW.add(_d)              # 併案不自立一_slot，其欄歸於主案
     cset = P.hl_cases(hl, *HL_SP[_k(hl_src_chap)][:2]) if hl_src_chap else []
     # 一案源可分授數章（如護欄第十章：眾學法諸案留第十二章，七滅諍三案歸第二十章），
     # 故本章之案須逐案照落點表取，不得把該源全部案例倒進每一章。
@@ -631,5 +745,8 @@ CODE_LOC = {}      # 〔XN〕→ (新章, 案序, 標題)——PLAN 定後方能
 for _ch, _items in PLAN.items():
     for _n, (_t, _code, _hc) in enumerate(_items, 1):
         if _code:
-            CODE_LOC[_code] = (_ch, _n, _t)
+            CODE_LOC[_code] = (_ch, _n, MERGE_TITLE.get(_code, _t))
+for _m, _d in FW_MERGE.items():
+    if _m in CODE_LOC:
+        CODE_LOC[_d] = CODE_LOC[_m]      # 併案之碼，指針歸於主案之位（不使成孤碼）
 
