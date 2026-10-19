@@ -14,6 +14,7 @@ sys.path.insert(0, HERE)
 import parse as P
 import clean as CL
 import refmap as CM
+import mirrors as MR
 
 OUT = os.path.join(ROOT, u"佛陀的護欄_四分律行為心理學與現代僧伽治理.md")
 for a in sys.argv[1:]:
@@ -359,10 +360,16 @@ def render_case(idx, title, fw_code, hl_case):
     body[u"事相經過"] = u"\n\n".join(narr).strip()
     f_mir, ok = to_second(relink(f.get(u"心相照鏡", u""), u"v"))
     body[u"心相照鏡"] = f_mir
-    if fw_code:
-        SENT["second_ok" if ok else "second_missing"] += 1
     h_mir = relink(u"\n\n".join(v for k, v in hp.items() if u"行為心理" in k or k == u"心理剖析"), u"h")
     body[u"法相剖析"] = (dedupe(f_mir, h_mir) if f_mir else h_mir).strip()
+    if fw_code and not f_mir and fw_code in MR.MIRROR_FILL:
+        # 舊源此等卡唯作通相剖析，未立自照之欄；今就本卡之剖析與處斷轉一機位，不增一法
+        f_mir = MR.MIRROR_FILL[fw_code]
+        body[u"心相照鏡"] = f_mir
+        SENT[u"mirror_fill"] += 1
+        ok = True
+    if fw_code:
+        SENT["second_ok" if ok else "second_missing"] += 1
     jud = [relink(f.get(u"佛陀處斷", u""), u"v")]
     if not jud[0]:
         jud = [relink(hp.get(u"律制", u""), u"h"), relink(hp.get(u"佛陀判語", u""), u"h"),
@@ -411,7 +418,8 @@ def render_case(idx, title, fw_code, hl_case):
 
 
 WIS_LEAD = [u"我們共勉：", u"我們同道共勉：", u"我們同勘此心：", u"我們且共勉："]
-SENT = {u"second_ok": 0, u"second_missing": 0, u"case": 0, u"fw_only": 0, u"hl_only": 0}
+SENT = {u"second_ok": 0, u"second_missing": 0, u"case": 0, u"fw_only": 0, u"hl_only": 0,
+        u"mirror_fill": 0}
 USED_FW = set()
 
 

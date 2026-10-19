@@ -335,8 +335,8 @@ n = len(book.split("\n"))
 cjk = len(re.findall(u"[\\u3400-\\u9fff]", book))
 print(u"落成：%s｜%d 行｜%d 字｜漢字 %d" % (os.path.basename(OUT), n, len(book), cjk))
 fused = sum(1 for t, items in A.PLAN.items() for _, code, hc in items if code and hc)
-print(u"案例：%d（框架 115＋護欄 164－同案合一 %d）｜人稱 你 %d／缺 %d｜指針重算 %d｜戒本表落地 %d" % (
+print(u"案例：%d（框架 115＋護欄 164－同案合一 %d）｜人稱 你 %d／缺 %d・補鏡 %d｜指針重算 %d｜戒本表落地 %d" % (
     A.SENT[u"case"], fused, A.SENT[u"second_ok"], A.SENT[u"second_missing"],
-    A.RELINK[u"n"], A.RELINK[u"case"]))
+    A.SENT[u"mirror_fill"], A.RELINK[u"n"], A.RELINK[u"case"]))
 for k in sorted(STATS):
     print(u"　規則 %-10s %d" % (k, STATS[k]))
