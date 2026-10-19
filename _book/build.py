@@ -557,6 +557,15 @@ POLISH = [
   u"**本章不引具體條號：正文唯留法理與程序之則，示例法域之條號具列於附錄四之對照表**；各道場應依行為地法規"
   u"（當地勞動基準、社會保險、個資與繼承法制）自換其條號與程序。",
   u"名實相符：條號既歸附錄，說明不得再自承『本章所引』"),
+ # ── 壬：奉令③・夾注之遷（卷首之按語留其位，憲綱所據之偈降其式樣）──
+ (u"〔案：角引號之『單／雙』名，港台與大陸之慣稱恰恰相反（港台以外層為單、內層為雙，大陸則反之），"
+  u"本書體例遂不取『單引號／雙引號』之稱，唯定名曰單層角引號、雙層角引號，一望其形而知所屬。〕",
+  u"按：角引號之『單／雙』名，港台與大陸之慣稱恰恰相反（港台以外層為單、內層為雙，大陸則反之）；"
+  u"本書體例遂不取『單引號／雙引號』之稱，唯定名曰單層角引號、雙層角引號，一望其形而知所屬。",
+  u"卷首乃體例之位，其說改作按語，不復挂夾注之形"),
+ (u"> 「飲食知止足，常樂在空閑，心定樂精進，是名諸佛教。」〔案：",
+  u"> 『飲食知止足，常樂在空閑，心定樂精進，是名諸佛教。』〔案：",
+  u"此偈非《四分律》本文，外層當挂雙層角引號（凡例第三層）；其辨登卷末校勘記"),
 ]
 
 
@@ -633,6 +642,69 @@ def secular(text):
     print(u"世俗條號之治：正文改 %d 處｜附錄四登 %d 行（同一名單為源）" % (n, len(rows)))
     return text[:k] + blk + text[k:]
 
+NOTE_RE = re.compile(u"〔案：([^〕]{1,400})〕")
+NOTE_KAO = re.compile(u"律無|律之|律中|非逐字|撮要|撮合|舊引|非本律|不別宣|0 見|查無|回填|今據|"
+                      u"不作逐字|巴利|諸部|全語料|本書之稱|存誠|覆核|別見|異寫|出處|未制|類推|推演")
+NOTE_HEAD = u"""### 附・卷末校勘記（自正文遷立者）
+
+正文不復夾注：凡舊引之正、逐字之辨、名相之異寫、出處之別見，悉登於此，各標其落點。落點以章・節・案為名，可循冊身而往核其文；記文如舊，未減一字。
+
+"""
+
+
+def spot_of(ch, sec, cs):
+    """落點之名：章取其號、節取其號、案取其號與題之首（截於句讀，不斬詞）。"""
+    a = (re.match(u"第[一二三四五六七八九十]+章", ch) or [u""])[0]
+    m = re.match(u"第[一二三四五六七八九十]+節", sec)
+    b = m.group(0) if m else (re.split(u"　", sec)[0][:10] if sec else u"")
+    c = u""
+    mm = re.match(u"案例([一二三四五六七八九十]+)[：:](.*)", cs)
+    if mm:
+        c = u"案例%s：%s" % (mm.group(1), re.split(u"——|：", mm.group(2))[0].strip()[:14])
+    elif cs:
+        c = re.split(u"　|（|\\s", cs)[0][:14]
+    return u"／".join(x for x in (a, b, c) if x) or u"（無節）"
+
+
+def scrub_notes(text):
+    """奉令③・〔案：〕之遷：考據之長記登卷末，敘事之短記併入正文；卷首與附錄之注各安其位。"""
+    lines = text.split(u"\n")
+    first = next((i for i, l in enumerate(lines, 1) if l.startswith(u"# 第") and u"章" in l), 1)
+    apx = next((i for i, l in enumerate(lines, 1) if l.startswith(u"# 【卷末")), len(lines))
+    rec, merged, out = [], [0], []
+    ch = sec = cs = u""
+    for i, l in enumerate(lines, 1):
+        if l.startswith(u"# "):
+            ch, sec, cs = l[2:14], u"", u""
+        elif l.startswith(u"## "):
+            sec, cs = l[3:26], u""
+        elif l.startswith(u"### "):
+            cs = l[4:30]
+        if i < first or i >= apx or u"〔案：" not in l:
+            out.append(l)
+            continue
+        spot = spot_of(ch, sec, cs)
+
+        def rep(m, spot=spot):
+            txt = m.group(1).strip()
+            if len(txt) <= 20 and not NOTE_KAO.search(txt):
+                merged[0] += 1
+                return txt if txt[-1:] in (u"。", u"！", u"？") else txt + u"。"
+            rec.append((spot, txt))
+            return u""
+        new = NOTE_RE.sub(rep, l)
+        new = re.sub(u"[ 　]{2,}", u" ", new)
+        new = re.sub(u"（〔〕）|，([。；、】』])", u"\\1", new)
+        out.append(new.rstrip())
+    blk = u"\n" + NOTE_HEAD + u"".join(
+        u"%d. **%s**｜%s\n" % (n + 1, sp, tx) for n, (sp, tx) in enumerate(rec)) + u"\n"
+    body = u"\n".join(out)
+    k = body.find(u"# 終卷")
+    if k < 0:
+        raise SystemExit(u"scrub_notes：終卷之界不可得，校勘記無處可插")
+    print(u"夾注之遷：登卷末 %d 條｜併入正文 %d 條｜卷首・附錄之注各安其位" % (len(rec), merged[0]))
+    return body[:k] + blk + body[k:]
+
 
 ATTR_NONVERB = re.compile(u"\u7fa9\u5f15|\u5927\u610f|\u62ec\u65e8|\u6458\u8a33|\u64ae\u8209|\u4eca\u8b6f|\u6539\u7de8")
 EPI_QUOTE = re.compile(u"^> \\*\\*([\u300c])(.+?)([\u300d])\\*\\*\\s*$")
@@ -703,6 +775,7 @@ print(u"節序之治：重編 %s｜指針改序 %d 條%s" % (
         len(clash), u"／".join(clash[:6])) if clash else u""))
 book = final_polish(book)
 book = secular(book)
+book = scrub_notes(book)
 book, nspan, span_rows = SQ.resolve_span(book, {u"v": A.fw, u"h": A.hl}, CM.SPAN)
 print(u"散點歸章：改指 %d 條｜落點之法源＝源節實文就冊身所量（%d 節有歸）" % (nspan, len(span_rows)))
 for r in span_rows:

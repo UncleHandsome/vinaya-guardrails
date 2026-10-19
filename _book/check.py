@@ -818,6 +818,34 @@ elif rows36 < 8:
 else:
     note(u"世俗法之號：正文 0 引，%d 行條號俱登附錄四對照表（與正文之改同一名單為源）" % rows36)
 
+# ── 卅七・正文不夾校勘之注（奉令：其記遷卷末，各標落點且落點須活）──────────
+CUT_LN37 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"# 【卷末")), len(BL))
+n37 = [u"L%d" % i for i in range(1, CUT_LN37) if u"〔案：" in BL[i - 1]]
+apx5 = book[book.find(u"## 附錄五"):book.find(u"# 終卷")] if u"## 附錄五" in book else u""
+ki = apx5.find(u"### 附・卷末校勘記")
+recs = re.findall(u"^\\d+\\. \\*\\*([^*]+)\\*\\*｜(.{4,})$", apx5[ki:], re.M) if ki >= 0 else []
+dead37 = []
+for spot, txt in recs:
+    m = re.match(u"(第[一二三四五六七八九十]+章)", spot)
+    if m and m.group(1) not in CHAP:
+        dead37.append(spot[:16] + u'（章無）')
+        continue
+    mc = re.search(u"案例([一二三四五六七八九十]+)", spot)
+    if mc:
+        ch = m.group(1) if m else None
+        if ch and not re.search(u"### 案例%s" % mc.group(1), CH_TXT.get(ch, u"")):
+            dead37.append(u"%s（案無）" % spot[:18])
+if n37:
+    bad(u"正文仍夾〔案：〕 %d 行：%s" % (len(n37), u"、".join(n37[:8])))
+if ki < 0:
+    bad(u"附錄五無『卷末校勘記』之篇")
+elif len(recs) < 25:
+    bad(u"校勘記得 %d 條（正文原有 35 條之記，除併入正文之短記，須成篇）" % len(recs))
+elif dead37:
+    bad(u"校勘記落點死鏈 %d 條：%s" % (len(dead37), u"／".join(dead37[:4])))
+else:
+    note(u"夾注之遷：正文（含卷首）〔案：〕0 行，卷末校勘記 %d 條，落點俱活" % len(recs))
+
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
     print(u"\n".join(u"✗ " + x for x in FAIL))
