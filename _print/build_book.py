@@ -214,8 +214,22 @@ def render_once(entries, pages, pre_sizes):
     return bool(changed)
 
 
+def _pre_rows(doc, at):
+    """該頁之印面行 [(y0, y1, 去空白之文字)]——供換行與跨頁之判。"""
+    rows = []
+    for bl in doc[at].get_text("rawdict")["blocks"]:
+        for ln in bl.get("lines", []):
+            s = "".join("".join(c["c"] for c in sp["chars"]) for sp in ln.get("spans", []))
+            s = "".join(s.split())
+            if s:
+                rows.append((ln["bbox"][1], ln["bbox"][3], s))
+    return rows
+
+
 def verify_print(entries, pages, blocks):
-    """印面之驗（量產物，不讀自報）：目錄逐條有碼・圍欄不換行・不出框・不斷頁。"""
+    """印面之驗（量產物，不讀自報）：目錄逐條有碼・圍欄不換行・短圖不跨頁。
+    定位口徑：先取『首尾俱在』之頁——首行文字在他頁（引文・目錄・同形框線）常再現，
+    單取首行所見之頁必錯；無同頁者方看『首在頁末而尾在次頁之頂』，那才是真跨頁。"""
     import pymupdf as pm
 
     d = pm.open(PDF_OUT)
@@ -234,29 +248,23 @@ def verify_print(entries, pages, blocks):
         if not b:
             continue
         head, tail = nn(b[0])[:12], nn(b[-1])[:12]
-        ph = [i for i, t in enumerate(txt) if head in t]
-        if not ph:
-            gone.append(k)
-            continue
-        pt = [i for i, t in enumerate(txt) if tail in t and i >= ph[0]]
-        if not pt:
-            gone.append(k)
-            continue
-        if ph[0] != pt[0]:
-            if len(b) > 40:                       # 長圖（如 67 行之產權三軌）原難限於一頁，容其跨
+        ph = set(i for i, t in enumerate(txt) if head in t)
+        pt = set(i for i, t in enumerate(txt) if tail in t)
+        both = sorted(ph & pt)
+        if not both:                              # 首尾不同頁：長圖（>40 行）容其延伸至次頁，短圖則為病
+            hp, tp = sorted(ph), sorted(pt)
+            if hp and tp and 0 < tp[0] - hp[0] <= 3:
+                if len(b) <= 40:
+                    split.append((k, hp[0] + 1, len(b)))
                 continue
-            split.append((k, ph[0] + 1, pt[0] + 1))
+            gone.append(k)
             continue
-        at = ph[0]
-        rows = []
-        for bl in d[at].get_text("rawdict")["blocks"]:
-            for ln in bl.get("lines", []):
-                s = nn("".join(c["c"] for sp in ln.get("spans", []) for c in sp["chars"]))
-                if s:
-                    rows.append((ln["bbox"][1], s))
-        ys = [r[0] for r in rows if r[1].startswith(head)]
-        ye = [r[0] for r in rows if r[1].startswith(tail)]
+        at = both[0]
+        rows = _pre_rows(d, at)
+        ys = [r[0] for r in rows if r[2].startswith(head)]
+        ye = [r[0] for r in rows if r[2].startswith(tail)]
         if not ys or not ye:
+            gone.append(k)
             continue
         seg = [r for r in rows if ys[0] - 1 <= r[0] <= max(ye) + 2]
         if len(seg) > len(b) + 1:
