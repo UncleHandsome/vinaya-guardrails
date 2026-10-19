@@ -303,12 +303,10 @@ gname = None
 mism = 0
 checked = 0
 for _l in L:
-    hm = re.match(u"^### [甲乙]、比丘尼?戒本：(.+?)（", _l)
+    hm = re.match(u"^### ([甲乙])、比丘尼?戒本：(.+?)（", _l)
     if hm:
-        gname = next((g for g in GRP if g in hm.group(1)), None)
-        if gname:
-            gname = hm.group(1)[:4]
-        continue
+        gname = hm.group(2)[:4] if hm.group(1) == u"甲" else None   # 乙部（尼）之案在第十～十三章，
+        continue                                                     # 其標題多不列條號，故不入此核
     rm = re.match(u"^(\d+)\.\s*[「『]", _l)
     if not rm or gname is None:
         continue
@@ -323,6 +321,59 @@ if mism:
 else:
     note.append(u"尺十一 台帳對案：%d 行『戒條→書中章案』與案例標題自列之條號一一合（%d 條可推）"
                 % (checked, len(plan)))
+
+# ── 尺十二 條案互證（正文段內之『戒條↔案例』須與台帳相合，台帳自身亦受其反核）──
+LED = {}
+gk = None
+Gg = re.compile(u"^### ([甲乙])、比丘尼?戒本：(.+?)（")
+Rr = re.compile(u"^(\d+)\.\s*[「『].*｜書中[：:]第([一二三四五六七八九十]+)章案例([一二三四五六七八九十百]+)")
+for _l in L:
+    g = Gg.match(_l)
+    if g:
+        gk = g.group(1) + g.group(2)[:4]
+        LED.setdefault(gk, {})
+        continue
+    r = Rr.match(_l)
+    if r and gk:
+        LED[gk][int(r.group(1))] = (cnum(r.group(2)), cnum(r.group(3)))
+CH2G = {5: u"甲四波羅夷", 6: u"甲十三僧殘", 7: u"甲三十捨墮", 8: u"甲九十單提",
+        9: u"甲提舍尼法", 11: u"乙三十捨墮", 12: u"乙一百七十八", 13: u"乙一百七十八"}
+GW = [(u"九十單提", u"甲九十單提"), (u"單提", u"甲九十單提"), (u"波逸提", u"甲九十單提"),
+      (u"捨墮", u"甲三十捨墮"), (u"尼薩耆", u"甲三十捨墮"), (u"僧殘", u"甲十三僧殘"),
+      (u"波羅夷", u"甲四波羅夷"), (u"提舍尼", u"甲提舍尼法")]
+PAT12 = re.compile(u"第([一二三四五六七八九十]+)章案例([一二三四五六七八九十百]+)")
+SEG12 = re.compile(u"【[^【】]*】|（[^（）]*）")
+i0b = next((k for k, x in enumerate(L, 1) if x.startswith(u"## 附錄二")), 0)
+i1b = next((k for k, x in enumerate(L, 1) if x.startswith(u"## 附錄三")), len(L))
+x12 = 0
+c12 = 0
+for _i, _l in enumerate(L, 1):
+    if _l.startswith(u"# ") or _l.startswith(u"### 案例") or i0b <= _i < i1b:
+        continue
+    for seg in SEG12.findall(_l):
+        ps = PAT12.findall(seg)
+        ks = re.findall(u"第([0-9]{1,3})條", seg)
+        if not ps or not ks:
+            continue
+        for p in ps:
+            cc, cs = cnum(p[0]), cnum(p[1])
+            g = CH2G.get(cc)
+            if not g:
+                continue
+            for w, gg in GW:
+                if w in seg:
+                    g = gg
+                    break
+            for k in ks:
+                if int(k) not in LED.get(g, {}):
+                    continue
+                c12 += 1
+                if LED[g][int(k)] != (cc, cs):
+                    x12 += 1
+if x12:
+    bad.append(u"尺十二 條案互證不合 %d 處（正文所系之章案與台帳異）" % x12)
+else:
+    note.append(u"尺十二 條案互證：%d 對『條號↔案例』俱與台帳相合（段內為界，篇聚從標）" % c12)
 
 print(u"\n".join(u"  ✓ " + x for x in note))
 print(u"病 %d 目" % len(bad))
