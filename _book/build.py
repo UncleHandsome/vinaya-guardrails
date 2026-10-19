@@ -256,9 +256,12 @@ HEAD.append(ROAD)
 HEAD.append(A.vfront(u"開卷總提撕"))
 
 # ── 卷末 ────────────────────────────────────────────────────────────────────
+_JB3 = A.jieben()
+_JBN = A.STATS.get(u"戒本號數") or {u"甲": 0, u"乙": 0}
+
 APX = [(u"附錄一", u"宗門心法——禪案與自性觀照輯要", A.vappx(u"A")),
        (u"附錄二", u"極限情境壓力測試矩陣", A.vappx(u"B")),
-       (u"附錄三", u"全戒本歷條總對照表（比丘 250・比丘尼 348）", A.jieben()),
+       (u"附錄三", u"全戒本歷條總對照表（比丘 %d・比丘尼 %d）" % (_JBN[u"甲"], _JBN[u"乙"]), _JB3),
        (u"附錄四", u"現代深水實務案例推演", A.vappx(u"J")),
        (u"附錄五", u"文獻存檔與經論互證", A.vappx(u"D") + u"\n\n" + A.vappx(u"E") + u"\n\n" + A.vappx(u"F"))]
 TAIL = [u"\n\n".join(u"## %s　%s\n\n%s" % (k, tt, re.sub(u"^## # ", u"# ", x)) for k, tt, x in APX)]

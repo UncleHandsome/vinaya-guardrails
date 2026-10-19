@@ -419,7 +419,7 @@ for k, (i, h) in enumerate(secs):
     if len(have) != want:
         bad(u"戒本篇 %s：宣 %d 號・列 %d（缺 %s）" % (h[4:26], want, len(have),
             u",".join(str(x) for x in sorted(set(range(1, want + 1)) - have)[:10])))
-note(u"附錄三歷條：逐篇核其自宣（12 篇），共列 %d 號（比丘 250・尼別宣 233・通數 483 之制）" % tot)
+note(u"附錄三歷條：逐篇核其自宣（%d 篇），共列 %d 號（篇數與號數俱由表身量得）" % (len(secs), tot))
 
 
 # ── 十四・節級與名級死鏈（章在而節無・案名不屬其章） ─────────────────────────────────────────────
@@ -1012,6 +1012,58 @@ else:
     else:
         note(u"六段之齊：%d 案俱立心相照鏡（%s），機位俱是『你』，所引俱有其出處" % (
             n_all, u"・".join(u"%s×%d" % (k, v) for k, v in sorted(cnt.items()))))
+
+
+# ── 四四・戒本總表之通數：表題之數須由表身自算，二部之組缺一不可 ─────────────
+_i3 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
+_i4 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄四")), len(BL))
+_jbt = re.match(u"^## 附錄三　全戒本歷條總對照表（比丘 (\\d+)・比丘尼 (\\d+)）", BL[_i3 - 1])
+_grp, _cur, real = {u"甲": [], u"乙": []}, None, {u"甲": 0, u"乙": 0}
+for l in BL[_i3:_i4]:
+    m = re.match(u"^### ([甲乙])、比丘尼?戒本：(.*)$", l)
+    if m:
+        _cur = m.group(1)
+        _grp[_cur].append(m.group(2))
+        continue
+    if _cur:
+        r = re.match(u"^\\s*(\\d+)(?:[～~](\\d+))?\\.\\s", l)
+        if r:
+            real[_cur] += (int(r.group(2)) - int(r.group(1)) + 1) if r.group(2) else 1
+NEED = {u"甲": [u"四波羅夷", u"十三僧殘", u"二不定法", u"三十捨墮", u"九十單提",
+               u"四提舍尼", u"百眾學法", u"七滅諍法"],
+        u"乙": [u"八波羅夷", u"十七僧殘", u"三十捨墮", u"一百七十八單提",
+               u"八悔過法", u"百眾學法", u"七滅諍法"]}
+lost = [u"%s・%s" % (b, k) for b in (u"甲", u"乙") for k in NEED[b]
+        if not any(x.startswith(k) for x in _grp[b])]
+if lost:
+    bad(u"戒本總表缺組：%s" % u"／".join(lost))
+_decl = {u"甲": [], u"乙": []}
+for l in BL[_i3:_i4]:
+    m = re.match(u"^### ([甲乙])、.*?戒本 (\\d+) 條", l)
+    if m:
+        _decl[m.group(1)].append(int(m.group(2)))
+_eq = re.search(u"（比丘 ([\\d＋]+)＝(\\d+) 條、比丘尼 ([\\d＋]+)＝(\\d+) 條，共 (\\d+) 號", book)
+if not _eq:
+    bad(u"戒本總表之算式走樣（表凡例無『比丘 …＝N 條、比丘尼 …＝M 條，共 K 號』）")
+else:
+    _a = [int(x) for x in _eq.group(1).split(u"＋")]
+    _b = [int(x) for x in _eq.group(3).split(u"＋")]
+    if _a != _decl[u"甲"] or _b != _decl[u"乙"]:
+        bad(u"表凡例算式與組頭不合：甲 宣%s・組頭%s ｜ 乙 宣%s・組頭%s" % (
+            _a, _decl[u"甲"], _b, _decl[u"乙"]))
+    elif int(_eq.group(2)) != sum(_a) or int(_eq.group(4)) != sum(_b) or int(_eq.group(5)) != sum(_a) + sum(_b):
+        bad(u"表凡例算式之和不實：甲%s＝%s・乙%s＝%s・共%s（當為 %d）" % (
+            _eq.group(2), sum(_a), _eq.group(4), sum(_b), _eq.group(5), sum(_a) + sum(_b)))
+if not _jbt:
+    bad(u"戒本總表表題形制走樣：=%s" % BL[_i3 - 1][:40])
+elif int(_jbt.group(1)) != real[u"甲"] or int(_jbt.group(2)) != real[u"乙"]:
+    bad(u"戒本總表宣比丘 %s・尼 %s，表身實列甲 %d・乙 %d（表題必由表身自算）"
+        % (_jbt.group(1), _jbt.group(2), real[u"甲"], real[u"乙"]))
+elif real[u"甲"] != 250 or real[u"乙"] != 348:
+    bad(u"二部通數當為 250／348，今甲 %d・乙 %d" % (real[u"甲"], real[u"乙"]))
+else:
+    note(u"戒本總表：甲 %d・乙 %d（乙含八悔過・百眾學・七滅諍 115 號，俱依律據登位）、表題與表身同數，"
+         u"甲 %d 組・乙 %d 組俱在" % (real[u"甲"], real[u"乙"], len(_grp[u"甲"]), len(_grp[u"乙"])))
 
 
 print(u"\n".join(u"● " + x for x in NOTE))

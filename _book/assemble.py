@@ -15,6 +15,7 @@ import parse as P
 import clean as CL
 import refmap as CM
 import mirrors as MR
+import jieben_ni as JN
 
 OUT = os.path.join(ROOT, u"佛陀的護欄_四分律行為心理學與現代僧伽治理.md")
 for a in sys.argv[1:]:
@@ -700,9 +701,18 @@ def vbody(pat):
 # ── 附錄三・戒本表之指針落地 ────────────────────────────────────────────────
 def jieben():
     a = next(i for i, l2, t in hl.h if l2 == 1 and t.startswith(u"附錄"))
-    txt = relink(hl.slice(a + 1, len(hl.lines)), u"h")
-
+    raw = hl.slice(a + 1, len(hl.lines))
+    raw = JN.insert(JN.fix_claim(raw), ROOT)      # 補乙部三組・改通數之宣稱
+    txt = relink(raw, u"h")
+    jn_stats(txt)
     return shift(txt, -1, 3)
+
+
+def jn_stats(txt):
+    """表題之數必由表身自算，不許手打（帳掛 STATS，供 build 印與 check 核）。"""
+    c = JN.counts(txt)
+    STATS["戒本號數"] = c
+    return c
 
 
 def case_refs(text):
