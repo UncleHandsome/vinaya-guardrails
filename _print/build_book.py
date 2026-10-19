@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""《佛陀的護欄・四分律行為心理學與現代僧伽治理》合編本・列印管線。
+"""《佛陀的護欄・四分律行為心理學與現代僧伽治理》重構定本・列印管線。
 
 法源不另起：pandoc 旗標、print38.css、字級覆寫、ensure_blank、render_html／render_pdf／
 stamp_pdf、圍欄回量、部題 Banner、drop_hr_before_h1、pre_wide_span、deliver 諸件
@@ -286,7 +286,7 @@ def main():
     src_txt = u"\n".join(lines)
     b38.COVER, b38.EDITION = COVER, EDITION
     b38.APPS = cover_counts(src_txt)
-    b38.COVER = COVER.replace(u"__SUB__", u"%s——判例與心所並陳" % b38.APPS)
+    b38.COVER = COVER.replace(u"__SUB__", u"%s——五篇二十章・判例與心所並陳" % b38.APPS)
     print(u"封面計數（自冊身取，不手打）：%s" % b38.APPS)
     hs = BH.headings(lines)
     BH.FENCE_BLOCKS = BH.fence_blocks(lines)
@@ -332,10 +332,10 @@ def main():
     outline, ml = BH.build_outline(d, hs)
     d.close()
     META = {
-        "title": u"%s｜四分律行為心理學與現代僧伽治理｜合編本（%s）" % (BOOK_TITLE, TAGL),
+        "title": u"%s｜四分律行為心理學與現代僧伽治理｜重構定本（%s）" % (BOOK_TITLE, TAGL),
         "author": u"編者",
-        "subject": u"漢譯《四分律》六十卷之行為心理學與僧伽治理·七部二十八章",
-        "keywords": u"四分律；毘奈耶；以遮衛性；八大正理；波羅夷；僧殘；捨墮；單提；眾學法；"
+        "subject": u"漢譯《四分律》六十卷之行為心理學與僧伽治理·五篇二十章",
+        "keywords": u"四分律；毘奈耶；以遮衛性；四大金剛底線；波羅夷；僧殘；捨墮；單提；眾學法；"
                     u"七滅諍；二十犍度；大正藏 No.1428",
         "creator": u"build_book 管線（沿用 build38 之法源：pandoc → 無頭 Chromium 列印）",
         "producer": u"build_book",
