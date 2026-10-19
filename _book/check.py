@@ -68,7 +68,7 @@ if len(apxs) != 5:
 if not [l for l in BL if l.startswith(u"# 終卷")]:
     bad(u"終卷佚")
 for f in [u"【題詞與獻辭】", u"【自序】", u"【導讀指南】", u"凡例】", u"【全書路標】",
-          u"【開卷總提撕】", u"總目錄】", u"【三篇立言之總意】", u"【本書之斷】", u"引文承諾六律"]:
+          u"【開卷總提撕】", u"總目錄】", u"【本書之斷】", u"引文承諾六律"]:
     if not any(l.startswith(u"#") and f in l for l in BL):
         bad(u"卷首・斷語件佚：%s" % f)
 short = []
@@ -883,6 +883,66 @@ for _m, _d in A.FW_MERGE.items():
     else:
         note(u"真合併：%d 對卡合為一案（二判俱存・敘事無兩出）——%s" % (
             len(A.FW_MERGE), ttl[:20]))
+
+# ── 四十・替換之殘（疊詞・雙標籤・半句之引，皆腳本痕跡，冊身不許存）──────────
+x40 = []
+for i, l in enumerate(BL[:CUT_APX], 1):
+    for pat, why in ((u"第 第", u"疊詞『第 第』"), (u"問問", u"疊詞『問問』"),
+                     (u"【([^：】]{2,12})：([^：】]{2,12})】", u"雙標籤")):
+        for m in re.finditer(pat, l):
+            if pat.startswith(u"【") and m.group(2) not in m.group(1) and m.group(1) not in m.group(2):
+                continue
+            x40.append(u"L%d %s（%s）" % (i, m.group(0)[:20], why))
+dbl40 = re.findall(u"【([^：】]{2,12})：([^：】]{2,12})】", u"\n".join(BL[:CUT_APX]))
+dbl40 = [d for d in dbl40 if d[1] in d[0] or d[0] in d[1]]
+half40 = [u"L%d" % (i) for i, l in enumerate(BL, 1) if l.startswith(u'### 案例') is False
+          and u'且把這一句留給自己' in l and (u'。 ' in l or re.search(u'[、，]」', l))]
+allx = x40 + [u"雙標籤 %s" % u''.join(d) for d in dbl40] + half40
+if allx:
+    bad(u"替換之殘 %d 處：%s" % (len(allx), u"｜".join(allx[:5])))
+else:
+    note(u"替換之殘：疊詞 0・雙標籤 0・半句之引 0（問卷歸形與標籤改語之疤已淨）")
+
+# ── 四一・卷首之文不落章中（章內不得有書首級之 H2）───────────────────
+STRAND = [u"【三篇立言之總意】", u"【卷首凡例與情境導航】", u"【開許篇末・體例例外說明】"]
+x41 = []
+for i, l in enumerate(BL[:CUT_APX], 1):
+    if not l.startswith(u"## "):
+        continue
+    if any(s in l for s in STRAND) or re.match(u"^## [壹貳參][·・]", l):
+        x41.append(u"L%d %s" % (i, l[3:24]))
+if x41:
+    bad(u"章中錯置書首之體 %d 處：%s" % (len(x41), u"／".join(x41[:4])))
+else:
+    note(u"卷首之體：章內無書首級之 H2（源冊自抄兩遍之導航碎片已剷）")
+
+# ── 四二・案例解碼之節題不得帶案數（有則必與實案相符）───────────────────
+CN42 = {c: i for i, c in enumerate(u"零一二三四五六七八九十")}
+
+
+def cn42(s):
+    if s == u"十":
+        return 10
+    if u"十" in s:
+        x, _, y = s.partition(u"十")
+        return (CN42.get(x, 1) * 10) + (CN42.get(y, 0) if y else 0)
+    return CN42.get(s, 0)
+
+
+x42 = []
+h42 = [(i, l) for i, l in enumerate(BL, 1) if re.match(u"^## 第[一二三四五六七八九十]+節", l)]
+for k, (i, l) in enumerate(h42):
+    if not re.search(u"案例解碼|案例深度|深度剖析|案例之解", l):
+        continue
+    j = h42[k + 1][0] if k + 1 < len(h42) else len(BL)
+    n = sum(1 for m in range(i, j) if BL[m - 1].startswith(u"### 案例"))
+    for m in re.finditer(u"([一二三四五六七八九十]+)(次|場|幕|則)", l):
+        if cn42(m.group(1)) != n:
+            x42.append(u"L%d『%s』稱%s・實案%d" % (i, m.group(0), m.group(1), n))
+if x42:
+    bad(u"節題之數不副實案 %d 處：%s" % (len(x42), u"／".join(x42[:4])))
+else:
+    note(u"節題之數：案例解碼諸節之題不帶案數（帶者俱與實案合）")
 
 # ── 卅九・六段之齊：每案俱立『心相照鏡』，其機位純為第二人稱，所引之語不虛出 ──
 no_mir, no_you, invented = [], [], []

@@ -169,8 +169,10 @@ def make_mirror(fa_text, idx):
             for sent in re.split(u"[。！？]", piece.strip()):
                 sent = bal(sent)
                 if len(sent) > 34:
-                    cuts = [m.start() for m in re.finditer(u"[，；]", sent[:34])]
-                    sent = bal(sent[:max(cuts) if cuts and max(cuts) > 9 else 34])
+                    cuts = [mm2.start() for mm2 in re.finditer(u"[，；、]", sent[:36])]
+                    if not cuts or max(cuts) <= 9:
+                        continue          # 無句讀可斷者棄之（硬刀截斷必成半句，是為敷衍）
+                    sent = bal(sent[:max(cuts)])
                 if 8 <= len(sent) <= 34:
                     cand.append(sent)
         if cand:
