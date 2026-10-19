@@ -206,6 +206,47 @@ else:
         note.append(u"尺八 戒本通數 甲 %d＝4+13+2+30+90+4+100+7・乙 %d＝8+17+30+178+8+100+7（表題與凡例算式合）"
                     % (a, b))
 
+# ── 尺九 款級之賬（債，非病：未经親裁之座標不得寫入，亦不得匿）────
+S9 = {}
+_cc = _ss = 0
+for _l in L:
+    m = re.match(u"^# 第([一二三四五六七八九十]+)章", _l)
+    if m:
+        _cc, _ss = cnum(m.group(1)), 0
+        continue
+    m = re.match(u"^## 第([一二三四五六七八九十]+)節", _l)
+    if m:
+        _ss = cnum(m.group(1))
+        S9.setdefault((_cc, _ss), set())
+        continue
+    if not _ss or _l.startswith(u"## ") or _l.startswith(u"# "):
+        continue
+    m = re.match(u"^### ([一二三四五六七八九十]+)、", _l)
+    if m:
+        S9[(_cc, _ss)].add(cnum(m.group(1)))
+        continue
+    m = re.match(u"^### ([0-9]+)\\. ", _l)
+    if m:
+        S9[(_cc, _ss)].add(int(m.group(1)))
+debt = 0
+for _l in L:
+    if _l.startswith(u"# "):
+        continue
+    for m in re.finditer(u"第([一二三四五六七八九十]+)章第([一二三四五六七八九十]+)節"
+                         u"第([一二三四五六七八九十]+)款", _l):
+        a, b, k = cnum(m.group(1)), cnum(m.group(2)), cnum(m.group(3))
+        if S9.get((a, b)) is None or k not in S9[(a, b)]:
+            debt += 1
+LED = os.path.join(ROOT, u"_book", u"款級待裁.txt")
+if debt:
+    note.append(u"尺九 【債】款級死指 %d 條在册（帳：%s）——該節實無此序之款，或彼章本非所指；"
+                u"機械降級則錯章保留，改章則屬臆推，故留原樣候親裁"
+                % (debt, os.path.basename(LED)))
+elif not os.path.exists(LED):
+    note.append(u"尺九 款級之賬：指針序號俱有其靶，債帳已銷")
+else:
+    note.append(u"尺九 款級之賬清零（債帳 %s 可歸檔）" % os.path.basename(LED))
+
 print(u"\n".join(u"  ✓ " + x for x in note))
 print(u"病 %d 目" % len(bad))
 for x in bad:
