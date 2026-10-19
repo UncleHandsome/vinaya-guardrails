@@ -1,6 +1,6 @@
 # 删除清冊 DELETED-20261019
 
-緣起：奉令「舊版本的直接刪掉不要、重新做新的」——舊合編本与其配套之審查企畫文書一律作废，
+緣起：奉令「舊版本的直接刪掉不要、重新做新的」——舊合編本與其配套之審查企畫文書一律作廢，
 新冊《佛陀的護欄：四分律行為心理學與現代僧伽治理》由 `_book/build.py` 自兩本舊源冊重產，不承其文。
 復原：以下二路徑皆在 git 史中（最舊一版為 commit c384c55），`git show HEAD^:路徑` 可逐枚取回。
 
@@ -14,3 +14,82 @@ _work/b.log（gitignore 所列執行期日誌）
 _print/merge_build.log（作廢之舊合編本建冊日誌）
 _print/_verify38.txt（可重建之驗收報）
 留：_work/hlface.last（工具之狀態檔，入庫者）・_archive/verify35_run.log（入庫之舊報，刪須另命）
+
+2026-10-19 第二波（新冊中間檔・43.7 MB）：
+_print/book.pdf
+_print/book_screen.pdf
+_print/book_列印版.md
+_print/book_列印版.html
+_print/book_列印版_screen.md
+_print/book_列印版_screen.html
+_print/final_book.html
+_print/final_book_screen.html
+_print/log_build_book.txt
+_print/log_build_book_screen.txt
+_print/ver38_列印版.html
+_print/ver38_列印版_screen.html
+_print/ver38_列印版_精簡本.html
+_print/ver38_列印版_精簡本_screen.html
+__pycache__\hulan_path.cpython-314.pyc
+_print/__pycache__\build38.cpython-314.pyc
+_print/__pycache__\build_hulan.cpython-314.pyc
+__pycache__\（目錄）
+_print/__pycache__\（目錄）
+
+2026-10-19 第一波・親裁四組（奉令「清理資料夾下不需要的檔案」・試跑列名 132.4 MB／51 項・落刀時 Python/ 中途受阻，次日以 rmdir 補除）：
+一・作廢之舊合編本產物（44.6 MB）
+_print/以遮衛性_四分律起心動念心智全書_影印版.pdf
+_print/merge.pdf
+_print/merge_列印版.md
+_print/merge_列印版.html
+_print/final_merge.html
+_print/build_merge.py
+_print/book_merge.py
+_archive/一次性/舊合編\（13 檔，遞迴）
+二・舊兩冊之短名 PDF（65.1 MB；四式長名交付檔一概未動）
+_print/ver38_列印版.pdf
+_print/ver38_列印版_screen.pdf
+_print/ver38_列印版_精簡本.pdf
+_print/ver38_列印版_精簡本_screen.pdf
+_print/hulan.pdf
+_print/hulan_screen.pdf
+_print/hulan_slim.pdf
+_print/hulan_screen_slim.pdf
+三・舊兩冊之 html／md 中間檔（22.7 MB）
+_print/final38.html
+_print/final38_screen.html
+_print/final38_精簡本.html
+_print/final38_精簡本_screen.html
+_print/final_hulan.html
+_print/final_hulan_screen.html
+_print/final_hulan_slim.html
+_print/final_hulan_screen_slim.html
+_print/ver38_列印版.md
+_print/ver38_列印版_screen.md
+_print/ver38_列印版_精簡本.md
+_print/ver38_列印版_精簡本_screen.md
+_print/hulan_列印版.md
+_print/hulan_列印版_screen.md
+_print/hulan_列印版_slim.md
+_print/hulan_列印版_screen_slim.md
+_print/hulan_列印版.html
+_print/hulan_列印版_screen.html
+_print/hulan_列印版_slim.html
+_print/hulan_列印版_screen_slim.html
+_print/_toccache.json
+_print/_toccache_screen.json
+_print/_toccache_精簡本.json
+_print/_toccache_精簡本_screen.json
+四・本機 Python 巢（65.6 MB／3,450 檔，非本庫之產物，乃工具自解之_runtime_）
+Python\（遞迴・rmdir /s /q 補除）
+
+勘誤一則（自記之戒）：第一波試跑逐項報「未入庫」，實則 _archive/一次性/舊合編\ 之 13 檔係入庫者——
+試跑以 Windows 反斜線路徑詢 git ls-files，分隔符不合故悉數誤判為未跟踪。
+此 13 檔（chapmap／depath／depath2／merge_build／merge_census／merge_check／pair_build／precommit／
+refnum／refnum_negtest／sanitize／落點表.tsv／掛點表.tsv）已 git rm 入帳，必要時以
+    git checkout c384c55 -- "_archive/一次性/舊合編"
+整批取回；以後試跑之跟踪查詢一律先把路徑的正斜線歸一。
+
+留（未列入任何刪除組，俟另命）：_print/_retired_31版／_print/cbeta／_print/wiki_juan／
+_print/mmdcfg.json／_print/print38.css／四式長名交付 PDF 八枚・_archive/一次性/舊合編 空目錄一方
+（OneDrive 之鎖，WinError 5，於倉庫無礙——git 不記空目錄）。
