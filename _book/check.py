@@ -456,7 +456,7 @@ try:
     deep = 0
     for l in BL:
         if l.startswith(u"#"):
-            deep = 0                     # 一節之引號不越標題而漏染下段（旧：附錄三之破引號使後半冊盡免此校）
+            deep = 0                     # 一節之引號不越標題而漏染下段（興：附錄三之破引號使後半冊盡免此校）
         seg = re.sub(u"「[^」]*」|『[^』]*』", u"", l)
         deep += l.count(u"「") - l.count(u"」") + len(re.findall(u"[「」]", l)) - len(re.findall(u"[「」]", seg))
         inq.append(deep > 0)
@@ -800,6 +800,23 @@ if h35:
     bad(u"正文仍借程式為喻 %d 處：%s" % (len(h35), u"｜".join(h35[:5])))
 else:
     note(u"隱喻之制：正文區無作業系統・App・紅隊・混沌工程一類程式之喻（城郭・醫方兩喻為歸）")
+
+# ── 卅六・世俗法之條號唯在附錄（奉令：正文只留法理與程序之則）────────────
+SEC_NAME = (u"勞基法|勞動基準法|個資法|個人資料保護法|刑事訴訟法|施行細則|民法|刑法|"
+            u"稅捐稽徵法|性別工作平等法|精神衛生法|醫療法|統計法|證券交易法|強制執行法")
+SEC_PAT = re.compile(u"(?:" + SEC_NAME + u")(?:》|』)?\\s*第\\s*[0-9０-９]{1,4}\\s*[條項款]")
+s36 = [u"L%d「%s」" % (MAIN[:m.start()].count(NL) + 1, m.group(0)) for m in SEC_PAT.finditer(MAIN)]
+apx4 = book[book.find(u"## 附錄四"):book.find(u"## 附錄五")]
+tab = re.search(u"^### 附・示例法域之條號對照.*?(?=^### |^## |^# |\\Z)", apx4, re.S | re.M)
+rows36 = len(re.findall(u"^\\| [^|]+\\| [^|]+ \\|$", tab.group(0), re.M)) - 1 if tab else -1
+if s36:
+    bad(u"正文仍引世俗條號 %d 處：%s" % (len(s36), u"｜".join(s36[:5])))
+if tab is None:
+    bad(u"附錄四無『示例法域之條號對照』之表")
+elif rows36 < 8:
+    bad(u"條號對照表得 %d 行（須≥8，正文既去號、附錄必有帳）" % rows36)
+else:
+    note(u"世俗法之號：正文 0 引，%d 行條號俱登附錄四對照表（與正文之改同一名單為源）" % rows36)
 
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
