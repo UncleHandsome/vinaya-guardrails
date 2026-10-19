@@ -304,6 +304,8 @@ def ref_fn(text, stats):
 # ── 案例之缝合（指南第三部：文獻一詳本為血肉・文獻二三環裁斷為骨架）─────────
 SEC_LABEL = [u"事相經過", u"心相照鏡", u"法相剖析", u"佛陀處斷", u"微觀動力學深描",
              u"人間智慧與行持", u"現代對讀", u"治理與修持對治", u"律藏原文", u"戒文（戒本次第）"]
+MOD_ITEM = re.compile(u"^\\s*[0-9]+[.、]\\s*\\*\\*現代(?:對應|對讀)[^*\\n]{0,2}\\*\\*\\s*[：:]?\\s*(.+?)"
+                      u"(?=\\n\\s*[0-9]+[.、]\\s*|\\Z)", re.M | re.S)
 NARR_VERB = re.compile(u"^(把|自|將|以|看|聽|貪|瞋|癡|慢|疑|惧|恐|逐|求|爭|執|守|掩|藏|隱|規|避|"
                        u"託|藉|憑|恃|挾|營|圖|算|計|怨|恨|責|諂|誑|覆|掉|散|怠|放|認|見|聞|知|受|想|行|做|作|說|言|動|起|犯|修|持|犯)")
 MIRROR_LEAD = [u"你且自照：", u"你照此心：", u"你當自問：", u"你——"]
@@ -362,6 +364,12 @@ def render_case(idx, title, fw_code, hl_case):
     body[u"心相照鏡"] = f_mir
     h_mir = relink(u"\n\n".join(v for k, v in hp.items() if u"行為心理" in k or k == u"心理剖析"), u"h")
     body[u"法相剖析"] = (dedupe(f_mir, h_mir) if f_mir else h_mir).strip()
+    mo = MOD_ITEM.search(body[u"法相剖析"])
+    if mo:
+        # 一說一處：舊源將『現代對應』作剖析清單之末項，合編時又據之以立小節，遂同段兩出。
+        # 今定其歸——其文唯入『現代對讀』小節，剖析之中刪末項而不多其文。
+        body[u"_末項"] = mo.group(1).strip()
+        body[u"法相剖析"] = body[u"法相剖析"][:mo.start()].rstrip()
     if fw_code and not f_mir and fw_code in MR.MIRROR_FILL:
         # 舊源此等卡唯作通相剖析，未立自照之欄；今就本卡之剖析與處斷轉一機位，不增一法
         f_mir = MR.MIRROR_FILL[fw_code]
@@ -380,9 +388,8 @@ def render_case(idx, title, fw_code, hl_case):
         if u"我們" not in fw_wis[:160]:
             fw_wis = WIS_LEAD[idx % 4] + fw_wis
         body[u"人間智慧與行持"] = fw_wis
-    else:
-        alt = re.search(r"\*\*現代對應：\*\*(.+)", u"\n".join(hp.values()) if hp else u"", re.S)
-        body[u"現代對讀"] = relink(alt.group(1).strip(), u"h").strip() if alt else u""
+    if body.get(u"_末項"):
+        body[u"現代對讀"] = body.pop(u"_末項")
     src = []
     if f.get(u"律藏原文"):
         src.append(relink(f[u"律藏原文"].strip(), u"v"))

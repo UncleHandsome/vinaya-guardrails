@@ -455,6 +455,8 @@ try:
     inq = []                             # 逐行標：是否處於跨行之引號內
     deep = 0
     for l in BL:
+        if l.startswith(u"#"):
+            deep = 0                     # 一節之引號不越標題而漏染下段（旧：附錄三之破引號使後半冊盡免此校）
         seg = re.sub(u"「[^」]*」|『[^』]*』", u"", l)
         deep += l.count(u"「") - l.count(u"」") + len(re.findall(u"[「」]", l)) - len(re.findall(u"[「」]", seg))
         inq.append(deep > 0)
@@ -742,6 +744,62 @@ if dups:
     bad(u"卷首序號兩出或斷頭 %d 件：%s" % (len(dups), u"｜".join(dups[:4])))
 else:
     note(u"卷首序號：%d 個文件之小目俱自一連貫，無『兩套四、兩套五』" % len(files))
+
+# ── 卅三・案內兩出（一案之欄文須唯一：同一長句不得既為甲欄之末項、又自立乙欄）──
+LEAD_LBL = re.compile(u"^\\s*(?:[0-9]+[.、]\\s*)?(?:\\*\\*)?(?:現代對讀|現代對應|法相剖析|心相照鏡|"
+                      u"行為心理剖析|心理剖析|人間智慧與行持|微觀心理動力學深描|治理與修持對治|防禦靶點)"
+                      u"(?:\\*\\*)?\\s*[：:]?\\s*")
+
+
+def case_spans(lines):
+    out, a = [], 0
+    hs = [i for i, l in enumerate(lines, 1) if l.startswith(u"### 案例")]
+    for k, i in enumerate(hs):
+        j = hs[k + 1] if k + 1 < len(hs) else len(lines)
+        for m in range(i, j):
+            if lines[m].startswith((u"## ", u"# ")) and m + 1 > i:
+                j = m
+                break
+        out.append((lines[i - 1], i, j))
+    return out
+
+
+dup33 = []
+for h, a, b in case_spans(BL):
+    keys = {}
+    for n in range(a, b):
+        t = norm(LEAD_LBL.sub(u"", BL[n - 1]))
+        if len(t) < 40:
+            continue
+        if t in keys:
+            dup33.append(u"%s｜L%d 與 L%d『%s』" % (h[4:18], keys[t], n, t[:16]))
+        else:
+            keys[t] = n
+if dup33:
+    bad(u"案內兩出 %d 段：%s" % (len(dup33), u"／".join(dup33[:4])))
+else:
+    note(u"案內兩出：0 段（舊源之『現代對應』末項已改隸其欄，一案一說）")
+
+# ── 卅四・年數不自悖（凡言『前十二年』者須帶後世之說明，憲綱不自行設年）──────
+n34 = [u"L%d" % i for i, l in enumerate(BL, 1)
+       if u"前十二年" in l and u"之說" not in l and u"後世" not in l and u"無文" not in l]
+if n34:
+    bad(u"年數自悖 %d 行（以『前十二年』自居為律文所記）：%s" % (len(n34), u"、".join(n34[:6])))
+else:
+    note(u"年數之制：『前十二年』唯見於引後世之說處，冊身敘事統作『初期』（本律無此文）")
+
+# ── 卅五・正文不借程式之物為法相之喻（卷首許隱喻歸城郭醫方，此其自證）────────
+TECH = [u"作業系統", u"Operating System", u"（OS", u"Apps", u"紅隊", u"混沌工程", u"架構師",
+        u"Time Buffer", u"Early Warning", u"Mindfulness", u"電腦科學", u"系統工程",
+        u"底層代碼", u"記憶體", u"死機", u"無崩潰系統", u"雷達", u"病毒", u"防毒", u"思想毒"]
+h35 = []
+for pat in TECH:
+    for m in re.finditer(re.escape(pat), MAIN):
+        h35.append(u"%s（L%d）" % (pat, MAIN[:m.start()].count(NL) + 1))
+if h35:
+    bad(u"正文仍借程式為喻 %d 處：%s" % (len(h35), u"｜".join(h35[:5])))
+else:
+    note(u"隱喻之制：正文區無作業系統・App・紅隊・混沌工程一類程式之喻（城郭・醫方兩喻為歸）")
 
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
