@@ -12,6 +12,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import parse as P
 import assemble as A
+import sequence as SQ
 
 BOOK = os.path.join(ROOT, u"佛陀的護欄_四分律行為心理學與現代僧伽治理.md")
 for a in sys.argv[1:]:
@@ -55,7 +56,7 @@ def cnt(pat, text=None):
     return len(re.findall(pat, text if text is not None else CORE))
 
 
-# ── 一・結構 ────────────────────────────────────────────────────────────────
+# ── 一・結構 ─────────────────────────────────────────────────────────────────
 parts = [l for l in BL if re.match(r"^# 【第[一二三四五六七八九十]+部：", l)]
 apxs = [l for l in BL if re.match(r"^## 附錄[一二三四五]　", l)]
 if len(parts) != 7:
@@ -78,7 +79,7 @@ for t, (a, b, sub) in CHAP.items():
 if short:
     bad(u"章身過短：%s" % u"、".join(short))
 
-# ── 二・指標 1・2：人造數字與後台代碼零殘留 ───────────────────────────────
+# ── 二・指標 1・2：人造數字與後台代碼零殘留 ────────────────────────────────────────────────
 BANNED = [
     (u"一百基準|100 則基準|百則基準|基準判例|不計入百則", u"基準定額"),
     (u"133 處|133 綁|共 133", u"133 平帳"),
@@ -112,7 +113,7 @@ for pat, name in [(u"括號之四制|四制各司", u"四制宣告"), (u"全形�
         bad(u"殘留「%s」" % name)
 note(u"考證夾注〔案：…〕%d 處（出版之夾注，非帳目）" % cnt(u"〔案：", book))
 
-# ── 三・指標 4：人稱機位 ────────────────────────────────────────────────────
+# ── 三・指標 4：人稱機位 ──────────────────────────────────────────────────────────
 SEC = re.compile(u"#### (心相照鏡|人間智慧與行持|法相剖析|事相經過|佛陀處斷)\n\n(.{0,1200}?)(?=\n#### |\n### |\Z)", re.S)
 secs = collections.defaultdict(list)
 for m in SEC.finditer(book):
@@ -129,7 +130,7 @@ note(u"人稱機位：心相 %d・智慧 %d・剖析 %d・事相 %d・處斷 %d 
     len(secs[u"心相照鏡"]), len(secs[u"人間智慧與行持"]), len(secs[u"法相剖析"]),
     len(secs[u"事相經過"]), len(secs[u"佛陀處斷"])))
 
-# ── 四・指標 5・7・8・9：四項裁定落地 ──────────────────────────────────────
+# ── 四・指標 5・7・8・9：四項裁定落地 ──────────────────────────────────────────────────
 MUST = [
     (u"挫折慢心療法|Ego-Crushing|認知行為療法（CBT）", u"指標五・舊說未拔", 0),
     (u"政治生存保護費|政治保護費", u"指標五・歷史定性", 1),
@@ -168,7 +169,7 @@ for t, (a, b, sub) in CHAP.items():
 if hits:
     bad(u"章末公式化抒情：%s" % u"、".join(hits))
 
-# ── 五・案例完備 ────────────────────────────────────────────────────────────
+# ── 五・案例完備 ───────────────────────────────────────────────────────────────
 CASE_RE = re.compile(u"^### 案例([一二三四五六七八九十]+)：", re.M)
 per = collections.OrderedDict()
 for t, (a, b, sub) in CHAP.items():
@@ -202,7 +203,7 @@ for t, ns in per.items():
 note(u"案例：%d 案・分 %d 章（無案例之章 %d）" % (
     total_case, len(per), sum(1 for v in per.values() if not v)))
 
-# ── 六・指針活鏈 ────────────────────────────────────────────────────────────
+# ── 六・指針活鏈 ───────────────────────────────────────────────────────────────
 dead = []
 for m in re.finditer(u"第([一二三四五六七八九十]+)章(?:案例([一二三四五六七八九十]+)|『([^』]{1,20})』案)?", book):
     key = u"第%s章" % m.group(1)
@@ -215,7 +216,7 @@ if dead:
 else:
     note(u"指針：章級與案級全活（章指針 %d 條）" % len(list(re.finditer(u"第[一二三四五六七八九十]+章", book))))
 
-# ── 七・素材涵蓋率（逐段回查兩本舊冊）──────────────────────────────────────
+# ── 七・素材涵蓋率（逐段回查兩本舊冊） ────────────────────────────────────────────────────
 EXC = [u"三十格", u"林下留白", u"空白格", u"留白觀", u"章末收卷", u"全章收卷", u"公堂燈熄",
        u"吃茶", u"松風", u"樹下吹風", u"章末引橋", u"把法袍留在門外", u"核心引橋",
        u"引橋：手握總帳", u"走出解剖室",
@@ -296,7 +297,7 @@ if lost_z > 6000:
 else:
     note(u"素材涵蓋：未落地 %d 段／%d 漢字（門檻 6,000）" % (lost_n, lost_z))
 
-# ── 八・圍欄與表 ────────────────────────────────────────────────────────────
+# ── 八・圍欄與表 ───────────────────────────────────────────────────────────────
 if len(re.findall(u"^```", book, re.M)) % 2:
     bad(u"圍欄不齊")
 badrows = [i for i, l in enumerate(BL, 1) if l.strip().startswith(u"|") and l.count(u"|") < 2]
@@ -305,7 +306,7 @@ if badrows:
 if u"\x01" in book:
     bad(u"護符未收（\\x01 殘留）")
 
-# ── 九・册題之尺：結構標題須與產器自報之清冊一字不差（防規則誤傷標題）────
+# ── 九・册題之尺：結構標題須與產器自報之清冊一字不差（防規則誤傷標題） ────────────────────────────────────
 MAN = os.path.join(HERE, u"册題清冊.tsv")
 if not os.path.exists(MAN):
     bad(u"册題清冊佚（產器未出冊題，無從核標題）")
@@ -323,7 +324,7 @@ else:
     if not gone and not extra:
         note(u"册題：%d 條結構標題與產器清冊一字不差" % len(want))
 
-# ── 十・出處閘門：自稱『律藏原文』者必冠卷段（凡例第三條之自證）──────────
+# ── 十・出處閘門：自稱『律藏原文』者必冠卷段（凡例第三條之自證） ───────────────────────────────────────
 YUAN = re.compile(u"#### 律藏原文\n\n(.{0,3000}?)(?=\n#### |\n### |\Z)", re.S)
 yq = YUAN.findall(book)
 yn = [s for s in yq if not re.search(u"卷[一二三四五六七八九十0-9]|卷 [0-9]|大正|No\\.142|《戒本》", s)]
@@ -332,7 +333,7 @@ if yn:
 note(u"出處閘門：律藏原文 %d 欄俱冠卷段・戒文（依戒本次第）%d 欄" % (
     len(yq), len(re.findall(u"#### 戒文（戒本次第）", book))))
 
-# ── 十一・引號之闭合（律文原樣登載者不計・新冊不得自造破口）──────────────
+# ── 十一・引號之闭合（律文原樣登載者不計・新冊不得自造破口） ─────────────────────────────────────────
 IA3 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
 IB3 = next((i for i in range(IA3 + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
 NL = chr(10)
@@ -374,7 +375,7 @@ for op, cl, nm in [(u"「", u"」", u"方引號"), (u"『", u"』", u"雙引號"
 if not any(x.startswith(u"引號破口") for x in FAIL):
     note(u"引號之闭合：除附錄三律文原樣登載者外，俱合")
 
-# ── 十二・節號一制（章內 H2 須自一連貫・形制唯一）────────────────────────
+# ── 十二・節號一制（章內 H2 須自一連貫・形制唯一） ────────────────────────────────────────────
 for t, (a, b, sub) in CHAP.items():
     js = [m.group(1) for m in re.finditer(u"^## 第([一二三四五六七八九十]+)節", u"\n".join(BL[a:b]), re.M)]
     ns = [m.group(1) for m in re.finditer(u"^## ([一二三四五六七八九十]+)、", u"\n".join(BL[a:b]), re.M)]
@@ -383,7 +384,7 @@ for t, (a, b, sub) in CHAP.items():
     if js and [P.cnum(x) for x in js] != list(range(1, len(js) + 1)):
         bad(u"%s 節號不連貫：%s" % (t, js))
 
-# ── 十三・附錄三戒本歷條：各篇之數須副其自宣（號段行按段計）─────────────
+# ── 十三・附錄三戒本歷條：各篇之數須副其自宣（號段行按段計） ─────────────────────────────────────────
 ia = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
 ib = next((i for i in range(ia + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
 secs = [(i, BL[i - 1]) for i in range(ia + 1, ib)
@@ -413,60 +414,7 @@ for k, (i, h) in enumerate(secs):
 note(u"附錄三歷條：逐篇核其自宣（12 篇），共列 %d 號（比丘 250・尼別宣 233・通數 483 之制）" % tot)
 
 
-# ── 十一・引號之闭合（律文原樣登載者不計・新冊不得自造破口）──────────────
-IA3 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
-IB3 = next((i for i in range(IA3 + 1, len(BL)) if BL[i - 1].startswith(u"## 附錄四")), len(BL))
-NL = chr(10)
-OFF3 = book.index(NL.join(BL[IA3:IB3])) if IA3 else -1
-OFF4 = book.index(NL.join(BL[IB3 - 1:IB3])) if IB3 < len(BL) else len(book)
-
-
-def walk(op, cl, nm, allow_zone=None):
-    st, miss = [], []
-    for i, c in enumerate(book):
-        if c == op:
-            st.append(i)
-        elif c == cl:
-            if st:
-                st.pop()
-            else:
-                miss.append((u"多闭合", i))
-    miss += [(u"未闭合", x) for x in st]
-    for kind, i in miss:
-        ln = book[:i].count(NL) + 1
-        txt = u"%s%s L%d：%s" % (nm, kind, ln, book[max(0, i - 40):i + 26].replace(NL, " "))
-        if allow_zone and allow_zone[0] <= i <= allow_zone[1]:
-            note(u"　引號例外（律文原樣登載）：%s" % txt)
-        else:
-            bad_(txt)
-    return len(miss)
-
-
-bad_ = []
-
-
-def bad_(txt):
-    FAIL.append(u"引號破口・" + txt)
-
-
-zone = (OFF3, OFF4) if OFF3 >= 0 else None
-for op, cl, nm in [(u"「", u"」", u"方引號"), (u"『", u"』", u"雙引號"), (u"〔", u"〕", u"六角")]:
-    walk(op, cl, nm, zone)
-if not any(x.startswith(u"引號破口") for x in FAIL):
-    note(u"引號之闭合：除附錄三律文原樣登載者外，俱合")
-
-# ── 十二・節號一制（章內 H2 須自一連貫・形制唯一）────────────────────────
-for t, (a, b, sub) in CHAP.items():
-    js = [m.group(1) for m in re.finditer(u"^## 第([一二三四五六七八九十]+)節", u"\n".join(BL[a:b]), re.M)]
-    ns = [m.group(1) for m in re.finditer(u"^## ([一二三四五六七八九十]+)、", u"\n".join(BL[a:b]), re.M)]
-    if js and ns:
-        bad(u"%s 節號兩制並存（第N節 %d・裸序 %d）" % (t, len(js), len(ns)))
-    if js and [P.cnum(x) for x in js] != list(range(1, len(js) + 1)):
-        bad(u"%s 節號不連貫：%s" % (t, js))
-
-
-
-# ── 九・節級與名級死鏈（章在而節無・案名不屬其章）──────────────────────────
+# ── 十四・節級與名級死鏈（章在而節無・案名不屬其章） ─────────────────────────────────────────────
 CH_TXT = {t: u"\n".join(BL[a:b]) for t, (a, b, sub) in CHAP.items()}
 dead_sec, dead_name = [], []
 for m in re.finditer(u"第([一二三四五六七八九十]+)章(第[一二三四五六七八九十]+節)", book):
@@ -498,7 +446,7 @@ if not dead_sec and not dead_name:
         len(re.findall(u"第[一二三四五六七八九十]+章『[^』]{1,20}』案", book))))
 print(u"\n".join(u"✗ " + x for x in FAIL[-2:]) if (dead_sec or dead_name) else u"")
 
-# ── 十四・字形之齊（簡形唯許存在於引號之內——引號內原典一字不篡）────────
+# ── 十五・字形之齊（簡形唯許存在於引號之內——引號內原典一字不篡） ──────────────────────────────────────
 try:
     sys.path.insert(0, os.path.join(ROOT, u"_work"))
     import _simpdict as SD
@@ -526,7 +474,7 @@ try:
 except ImportError:
     note(u"字形之檢未行（缺 _work/_simpdict.py）")
 
-# ── 十五・長段不兩出（同章重複為病，跨章重述只登於目）────────────────────
+# ── 十六・長段不兩出（同章重複為病，跨章重述只登於目） ────────────────────────────────────────────
 def chap_at(n):
     cur = u"（卷首末）"
     for t, (a, b, sub) in CHAP.items():
@@ -552,9 +500,80 @@ if same:
 note(u"長段：同章兩出 %d 組（須零）・跨章重述 %d 組・同章同引（律文複引，屬當然）%d 組" % (
     len(same), len(cross), sum(1 for k, v in quoted.items() if len(v) > 1)))
 
+# ── 十七・自稱之數須與實冊相符（書云幾部幾章，即與册身實際對核） ───────────────────────────────────────
+CN2I = {c: i for i, c in enumerate(u"零一二三四五六七八九")}
+
+
+def cn2i(s):
+    if s in CN2I:
+        return CN2I[s]
+    a, _, b = s.partition(u"十")
+    if a or b:
+        t = 1 if a in (u"", u"一") else CN2I.get(a, 1)
+        return t * 10 + (CN2I.get(b, 0) if b else 0)
+    return 10 if s == u"十" else 0
+
+
+claims = []
+for m in re.finditer(u"(?:本書|全書)歷經([一二三四五六七八九十]+)部、([一二三四五六七八九十]+)章", book):
+    claims.append((u"部", cn2i(m.group(1)), len(parts)))
+    claims.append((u"章", cn2i(m.group(2)), len(CHAP)))
+for m in re.finditer(u"(?<![一-鿿])([一二三四五六七八九十]+)章將依律藏", book):
+    claims.append((u"章", cn2i(m.group(1)), len(CHAP)))
+wrong = [(k, a, b) for k, a, b in claims if a != b]
+if wrong:
+    bad(u"自稱之數與實冊不符：%s" % u"｜".join(u"%s宣%d實%d" % w for w in wrong[:5]))
+elif claims:
+    note(u"自稱之數：%d 處俱與實冊合（7 部・28 章）" % len(claims))
+
+# ── 十八・指針之形不得混雜（『第X至Y章第N節』一类改指未淨之hybrid） ─────────────────────────────────
+HYB_RX = (u"第[一二三四五六七八九十]+(?:至|、)第?[一二三四五六七八九十]+章"
+          u"第[一二三四五六七八九十]+(?:、第?[一二三四五六七八九十]+)*節")
+hyb = re.findall(HYB_RX, book)
+if hyb:
+    bad(u"混合指針之形 %d 條：%s" % (len(hyb), u"｜".join(sorted(set(hyb))[:4])))
+else:
+    note(u"指針之形：無『範圍＋節』之混合式")
+
+# ── 十九・款級指針之活：所言第N款須真在其節（款號以節內實數為憑） ──────────────────────────────────────
+ST = SQ.flat_texts(BL)
+dead_k = []
+n_k = 0
+for m in re.finditer(u"(第([一二三四五六七八九十]+)章第([一二三四五六七八九十]+)節)(第|其)([一二三四五六七八九十]+)(款|項)", book):
+    ref = m.group(1)
+    n_k += 1
+    if ref not in ST:
+        dead_k.append(u"%s（節佚）" % ref)
+        continue
+    if SQ.cnum(m.group(5)) not in SQ.item_labels(ST[ref]):
+        dead_k.append(u"%s 無款%s" % (ref, m.group(5)))
+if dead_k:
+    bad(u"款級死指 %d/%d 條：%s" % (len(dead_k), n_k, u"｜".join(sorted(set(dead_k))[:5])))
+else:
+    note(u"款級指針：%d 條，款號俱在其節實數之內" % n_k)
+
+# ── 二十・指針自證：凡指針自報節題者，其題須真見於所指之節 ──────────────────────────────────────────
+SELF_RX = [(SQ.Q1, 1, 4), (SQ.Q2, 5, 2)]
+n_s = 0
+wrong_s = []
+for rx, igr, ing in SELF_RX:
+    for m in rx.finditer(book):
+        ref, nm = m.group(igr), m.group(ing)
+        n_s += 1
+        body = ST.get(ref)
+        if body is None:
+            wrong_s.append(u"%s 節佚（宣「%s」）" % (ref, nm))
+        elif nm not in body:
+            wrong_s.append(u"%s 不載「%s」" % (ref, nm))
+if wrong_s:
+    bad(u"指針自證破口 %d 條：%s" % (len(wrong_s), u"｜".join(sorted(set(wrong_s))[:5])))
+elif n_s:
+    note(u"指針自證：%d 條自報節題者，題俱在所指之節" % n_s)
+
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
     print(u"\n".join(u"✗ " + x for x in FAIL))
     print(u"退回：%d 項不合格" % len(FAIL))
     sys.exit(1)
-print(u"✓ 十指標俱清｜冊身 %d 行・%d 字・漢字 %d" % (len(BL), len(book), len(BN)))
+GC = len(re.findall(u"^# \u2500\u2500 ", io.open(__file__, encoding="utf-8").read(), re.M))
+print(u"✓ %d 尺俱清｜冊身 %d 行・%d 字・漢字 %d" % (GC, len(BL), len(book), len(BN)))

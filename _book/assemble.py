@@ -224,9 +224,10 @@ def _map(num, sec, src):
     key = num if num.startswith(u"第") else u"第%s章" % num
     sp = CM.SPLIT.get(key)
     if sp:
-        if sec and sp[2] in sec:
-            return sp[1]
         if not sec:
+            return CM.pair(sp[0], sp[1])
+        if u"節" in sec or (sp[2] and sp[2] in sec):
+            # 散置之章：其節分隸主副兩章，此處只立混合名，落點由 `sequence.resolve_span` 據實文算
             return CM.pair(sp[0], sp[1])
         return sp[0]
     return m.get(key)
@@ -245,15 +246,9 @@ def relink(text, src):
             return u"%d" % (len(toks) - 1)
         return m.group(0)
     text = re.sub(u"第([一二三四五六七八九十]+)章(案例[一二三四五六七八九十]+)", stash, text)
-    out, fence = [], False
+    # 圍欄內之路標圖一樣是源冊章次，同須改指——昔以『圖形勿動』skip 之，遂留舊章號於新冊
+    out = []
     for l in text.split(u"\n"):
-        if l.startswith("```"):
-            fence = not fence
-            out.append(l)
-            continue
-        if fence:
-            out.append(l)
-            continue
         if l.startswith(u">"):
             # 引文行亦得改指針，唯引號之內不動（律文自稱卷段，不含章號；章號唯作者之語）
             segs = re.split(u"(「[^」]*」|『[^』]*』)", l[2:] if l.startswith(u"> ") else l[1:])

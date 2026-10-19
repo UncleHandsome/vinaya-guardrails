@@ -343,25 +343,6 @@ LABELS = [(u"**【案發現場（制戒因緣）】：**", u"**制戒因緣**：
 LABEL_NUM = re.compile(u"【第([0-9]+)條 條文】：")
 
 
-TOOLBOX = [(u"卷末・工具箱第三節", u"第二十六章"), (u"卷末・工具箱第二節", u"第二十七章"),
-           (u"卷末・工具箱第四節", u"第二十六章"), (u"卷末・工具箱第五節", u"第二十八章"),
-           (u"卷末・工具箱", u"第二十六至二十八章")]
-
-
-def repoint_toolbox(text, stats):
-    """舊冊『卷末・工具箱』之指針改指新章，唯行於內文——結構標題自有其名，不受此改。"""
-    out = []
-    for l in text.split(u"\n"):
-        if l.startswith(u"#"):
-            out.append(l)
-            continue
-        for bad, good in TOOLBOX:
-            if bad in l:
-                stats["工具箱改指"] += l.count(bad)
-                l = l.replace(bad, good)
-        out.append(l)
-    return u"\n".join(out)
-
 
 def naturalize_labels(text, stats):
     t = text
@@ -379,13 +360,11 @@ def naturalize_labels(text, stats):
 def apply_rules(text, stats, ref_fn=None, name_pairs=(), overrides=None):
     """規則之總序：先塊後行、先形後數。"""
     t = text
-    t = text
     for bad, good in (overrides or []):        # 指定改寫先行
         if bad and bad in t:
             stats["指定改寫"] = stats.get("指定改寫", 0) + 1
             t = t.replace(bad, good)
     t = naturalize_labels(t, stats)
-    t = repoint_toolbox(t, stats)
     keep = []
     for l in t.split(u"\n"):
         if DING.match(l.strip()):
