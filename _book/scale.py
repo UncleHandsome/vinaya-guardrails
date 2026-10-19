@@ -100,7 +100,7 @@ else:
     note.append(u"尺二 目錄 %d 條與冊身實題逐條對合（虛列 0・漏列 0）" % len(toc))
 
 # ── 尺三 死鏈四式 ────────────────────────────────────────────
-d1 = d2 = d3 = d4 = 0
+d1 = d2 = d3 = d4 = d5 = 0
 for l in L:
     if l.startswith(u"# "):
         continue
@@ -118,10 +118,14 @@ for l in L:
     for m in re.finditer(u"附錄([一二三四五六七八九十]+)", l):
         if cnum(m.group(1)) > n_apx:
             d4 += 1
-if d1 + d2 + d3 + d4:
-    bad.append(u"尺三 死鏈：案例 %d・節 %d・篇 %d・附錄 %d" % (d1, d2, d3, d4))
+    for m in re.finditer(u"第([一二三四五六七八九十]+)章", l):
+        if cnum(m.group(1)) > 20:          # 越出冊身章數者，必是舊編次之殘跡
+            d5 += 1
+if d1 + d2 + d3 + d4 + d5:
+    bad.append(u"尺三 死鏈：案例 %d・節 %d・篇 %d・附錄 %d・越數之章 %d"
+               % (d1, d2, d3, d4, d5))
 else:
-    note.append(u"尺三 死鏈四式俱 0（案例・節・篇・附錄）")
+    note.append(u"尺三 死鏈五式俱 0（案例・節・篇・附錄・越數之章）")
 
 # ── 尺四 四步之齊 ────────────────────────────────────────────
 FLD = [u"事相經過", u"心相照鏡", u"法相剖析", u"佛陀處斷", u"人間智慧與行持",
