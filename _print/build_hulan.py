@@ -13,6 +13,7 @@
 """
 import os as _hp_os, sys as _hp_sys; _hp_sys.path.insert(0, _hp_os.path.dirname(_hp_os.path.dirname(_hp_os.path.abspath(__file__)))); import hulan_path as HP  # hulan-path
 import io
+import html as html_module                          # 圍欄標籤配對時解實字體（&gt; 之類）
 import os
 import re
 import shutil
@@ -105,6 +106,9 @@ b38.PRINT_CSS = b38.PRINT_CSS + (
     # 圍欄內之東亞寬字放大 10%，使 CJK 步進恰為框線／數字之兩倍（格寬模型見 pre_wide_span）；
     # line-height:1 俾行框仍由窄字決定，圖不因此長高。
     "\npre .pw { font-size: 1.1em; line-height: 1; }\n"
+    # Consolas 缺字（→▼ 之類）後備到正黑會以全形出字，一格之字占兩格而推歪圖；
+    # 以 .55em 出之，advance 恰回一格（0.55em），字形不失而格線復位。
+    "\npre .pf { font-size: .55em; line-height: 1; }\n"
 )
 
 META = {
@@ -272,38 +276,44 @@ def mark_part_pages():
 
 
 def pre_wide_span():
-    """令圍欄內之東亞寬字（ord≥0x2E80）以 1.1em 出字。
+    """令圍欄內之東亞寬字（ord≥0x2E80）以 1.1em 出字；Consolas 缺字之幾何／箭頭以 .55em 出字。
 
     印面實測（第 244 輪）：Consolas 之框線／數字／空白步進 0.55em，正黑之 CJK 步進 1.00em，
-    比值 1.82；而源檔 22 段框線圖一律以「CJK＝兩格、框線＝一格」（即 2:1）排格，
+    比值 1.82；而源檔框線圖一律以「CJK＝兩格、框線＝一格」（即 2:1）排格，
     故欄位必逐格左漂——十三僧殘五道防線圖至第五欄已錯開近一字。將寬字放大 10% 後
     比值恰為 2.00，`_cw` 之格寬模型與印面相符，fit_pre_blocks 之縮字亦隨之準確。
+
+    第二病（第 55 輪實測）：『→』『▼』諸字 Consolas 不收，瀏覽器後備到正黑而以全形（1.0em）
+    出字——源檔按一格排，印面占兩格，一行之內凡含此字者其右諸欄悉數左移。今以 `.pf`（0.55em）
+    出之，advance 恰回一格（0.55em），字形不失而格線復位。
     標籤皆純 ASCII（ord<0x2E80），故包 span 不會截斷既有標記或字元實體。
     """
+    PF = set(u'→←↑↓▼')                       # Consolas 缺字而後備成全形者（全冊掃得此數枚）
     html = io.open(FINAL, encoding="utf-8").read()
 
     def one(m):
         head, inner, tail = m.group(1), m.group(2), m.group(3)
-        out, run = [], []
+        out, run, cls = [], [], None
 
         def flush():
             if run:
-                out.append('<span class="pw">' + "".join(run) + "</span>")
+                out.append('<span class="%s">' % cls + "".join(run) + "</span>")
                 del run[:]
 
         for ch in inner:
-            if ord(ch) >= 0x2E80:
-                run.append(ch)
-            else:
+            c2 = "pw" if ord(ch) >= 0x2E80 else ("pf" if ch in PF else None)
+            if c2 != cls:
                 flush()
-                out.append(ch)
+                cls = c2
+            (run if c2 else out).append(ch)
         flush()
         return head + "".join(out) + tail
 
     new, n = re.subn(r"(?s)(<pre\b[^>]*>)(.*?)(</pre>)", one, html)
     if n:
         io.open(FINAL, "w", encoding="utf-8").write(new)
-    print("圍欄寬字加 span：%d 段（CJK 出字 1.1em，合 2:1 格寬）" % n)
+    npf = new.count('<span class="pf">')
+    print("圍欄寬字加 span：%d 段（CJK 出字 1.1em，合 2:1 格寬）・缺字回一格：%d 處" % (n, npf))
 
 
 def fence_blocks(lines):
@@ -371,22 +381,72 @@ def pre_overflows(pdf, blocks):
                and g["rect"].x0 <= x0 + 1 and g["rect"].x1 > x0 + 100]
         right = min((r.x1 for r in box), default=d[at].rect.width - 51.0)
         avail = right - 0.55 * size - 1.2 - x0
-        if 0.55 * wmax * size > avail + 0.5:
-            need[k] = round(max(6.2, avail / (0.55 * wmax + 1.1)), 2)
+        wrapped = len(seg) > len(b) + 1        # 印面行數多於源檔行數＝圖已被換行鋸斷
+        if 0.55 * wmax * size > avail + 0.5 or wrapped:
+            fit = avail / (0.55 * wmax + 1.1)
+            if wrapped:                        # 已換行者再折一刀，免卡在邊界上原地打轉
+                fit = min(fit, size * (len(b) + 0.5) / len(seg))
+            need[k] = round(max(6.2, fit), 2)
     d.close()
     return need
 
 
-def apply_pre_sizes(sizes):
+def pre_tag_map(blocks):
+    """源檔第 k 段圍欄 ↔ FINAL html 內第幾個 <pre>（0 起）——以首尾行內容配對。
+    單靠序號必錯位：pandoc 亦會因縮排而生 <pre>（本冊實測 95 標籤 vs 源檔 93 段），
+    錯位則縮字縮到別段去，該縮者永不縮、印面遂換行散架。回 ({k: idx}, 標籤數, 未配對段)。"""
+    html = io.open(FINAL, encoding="utf-8").read()
+    tags = [m for m in re.finditer(r"(?s)<pre\b[^>]*>(.*?)</pre>", html)]
+
+    def nn(s):
+        return "".join(html_module.unescape(re.sub(r"(?s)<[^>]+>", "", s)).split())
+
+    body = [nn(m.group(1)) for m in tags]
+    mapping, used, cur, miss = {}, set(), 0, []
+    for k, b in enumerate(blocks, 1):
+        if not b:
+            continue
+        h, t = nn("\n".join(b[:1]))[:12], nn(b[-1])[:12]
+        pick = None
+        for j in range(cur, len(tags)):
+            if j in used or not body[j].startswith(h):
+                continue
+            if not t or t in body[j]:
+                pick = j
+                break
+        if pick is None:
+            for j in range(len(tags)):
+                if j in used or not body[j].startswith(h):
+                    continue
+                if not t or t in body[j]:
+                    pick = j
+                    break
+        if pick is None:
+            miss.append(k)
+            continue
+        mapping[k] = pick
+        used.add(pick)
+        cur = pick + 1
+    return mapping, len(tags), miss
+
+
+def apply_pre_sizes(sizes, blocks=None):
     """把第 k 段 pre 之 inline 字級改為量得之值（只改標籤，不動內容）。
+    給 blocks 則以內容配對標籤（正法）；不給則沿用序號舊口徑（他冊之 reproduce 不變）。
     一次取全部標籤、由後而前改寫，免位移錯號。"""
     html = io.open(FINAL, encoding="utf-8").read()
     tags = [m for m in re.finditer(r"(?s)<pre\b[^>]*>", html)]
+    mp = {}
+    if blocks:
+        mp, _n, miss = pre_tag_map(blocks)
+        if miss:
+            print("圍欄配對：未能在印面尋得第 %s 段之標籤（此段不縮）" % "、".join(str(x) for x in miss[:6]))
     done = 0
     for k in sorted(sizes, reverse=True):
-        if k > len(tags):
+        idx = mp.get(k, k - 1) if blocks else k - 1
+        if idx >= len(tags):
             break
-        m = tags[k - 1]
+        m = tags[idx]
         head = m.group(0)
         new = re.sub(r"font-size:\s*[\d.]+pt", "font-size:%gpt" % sizes[k], head)
         if new == head:
@@ -397,18 +457,20 @@ def apply_pre_sizes(sizes):
     return done
 
 
-def refit_pre(loop=3):
-    """渲染→量→縮→再渲染，直至無一段圍欄溢出（或達回合上限）。"""
+def refit_pre(loop=4):
+    """渲染→量→縮→再渲染，直至無一段圍欄溢出或換行（或達回合上限）。"""
     blocks = FENCE_BLOCKS
     for rd in range(loop):
         need = pre_overflows(PDF, blocks)
         if not need:
-            print("圍欄回量：第 %d 回合，%d 段俱合版寬，無須再縮" % (rd + 1, len(blocks)))
+            print("圍欄回量：第 %d 回合，%d 段俱合版寬、無換行，无须再縮" % (rd + 1, len(blocks)))
             return
-        n = apply_pre_sizes(need)
+        n = apply_pre_sizes(need, blocks)
         print("圍欄回量：第 %d 回合縮 %d 段（%s）"
               % (rd + 1, n, "、".join("#%d→%gpt" % (k, need[k]) for k in sorted(need)[:6])))
         b38.render_pdf()
+    print("圍欄回量：達回合上限，末回合仍報 %d 段——須查（見 pre_overflows）"
+          % len(pre_overflows(PDF, blocks)))
 
 
 def main():

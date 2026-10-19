@@ -22,3 +22,12 @@ _merge/depath2.py
 _merge/precommit.py
 _merge/sanitize.py
 _work/b.log
+
+# 目視之截圖（隨時可重生成：`python -X utf8 _work/presnap.py <pdf> [頁…]`）
+_work/*.png
+
+# 作業系統與同步盤之雜檔（永不入庫）
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
