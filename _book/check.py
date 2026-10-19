@@ -884,6 +884,44 @@ for _m, _d in A.FW_MERGE.items():
         note(u"真合併：%d 對卡合為一案（二判俱存・敘事無兩出）——%s" % (
             len(A.FW_MERGE), ttl[:20]))
 
+# ── 卅九・六段之齊：每案俱立『心相照鏡』，其機位純為第二人稱，所引之語不虛出 ──
+no_mir, no_you, invented = [], [], []
+for i, l in enumerate(BL, 1):
+    if not l.startswith(u"### 案例"):
+        continue
+    j = next((k for k in range(i + 1, len(BL)) if BL[k - 1].startswith((u"### ", u"## ", u"# "))), len(BL))
+    blk = u"\n".join(BL[i:j - 1])
+    mm = re.search(u"^#### 心相照鏡\\n\\n(.*?)\\n\\n(?:#### |---)", blk + u"\n\n---", re.S | re.M)
+    if not mm:
+        no_mir.append(l[4:26])
+        continue
+    mir = mm.group(1)
+    if u"你" not in mir[:120]:
+        no_you.append(l[4:22])
+    for q in re.findall(u"[「『]([^」』]{8,40})[」』]", mir):
+        if q not in blk and q not in book:
+            invented.append(u"%s｜%s" % (l[4:18], q[:18]))
+if no_mir or no_you or invented:
+    bad(u"六段不齊：缺鏡 %d 案（例：%s）・機位無『你』 %d 案・所引無出處 %d 條（例：%s）" % (
+        len(no_mir), u"／".join(no_mir[:2]), len(no_you), len(invented), u"／".join(invented[:2])))
+else:
+    reg = [l.split(u"\t") for l in io.open(os.path.join(HERE, u"鏡位清冊.tsv"), encoding="utf-8").read().split(NL) if l.strip()]
+    cnt = {}
+    for r in reg:
+        cnt[r[2] if len(r) > 2 else u"？"] = cnt.get(r[2] if len(r) > 2 else u"？", 0) + 1
+    miss = [t for _c, t in ((r[0], r[1]) for r in reg) if t and t[:12] not in book]
+    n_all = len([1 for l in BL if l.startswith(u"### 案例")])
+    if len(reg) != n_all:
+        bad(u"鏡位清冊 %d 行 ≠ 冊身案例 %d" % (len(reg), n_all))
+    elif miss:
+        bad(u"鏡位清冊所記之案有 %d 條不見於冊身（例：%s）" % (len(miss), miss[0][:22]))
+    elif cnt.get(u"無骨可轉"):
+        bad(u"轉位不成者 %d 案（剖析無骨可取）" % cnt[u"無骨可轉"])
+    else:
+        note(u"六段之齊：%d 案俱立心相照鏡（%s），機位俱是『你』，所引俱有其出處" % (
+            n_all, u"・".join(u"%s×%d" % (k, v) for k, v in sorted(cnt.items()))))
+
+
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
     print(u"\n".join(u"✗ " + x for x in FAIL))

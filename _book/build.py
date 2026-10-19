@@ -872,6 +872,23 @@ rows += [l.rstrip() for l in book.split("\n") if re.match(u"^## 附錄[一二三
 io.open(os.path.join(HERE, u"册題清冊.tsv"), "w", encoding="utf-8", newline="\n").write(
     "\n".join(rows) + "\n")
 
+# 鏡位清冊：每案之『心相照鏡』從何而來（源冊自照／補遺親筆／轉剖析而立・其frame），尺據以核冊身
+mrows, mcur = [], u""
+for l in book.split("\n"):
+    if l.startswith(u"# "):
+        mcur = l[2:14]
+    elif l.startswith(u"### 案例"):
+        ttl = l[4:]
+        core = re.split(u"：", ttl, 1)[-1]
+        mrows.append(u"\t".join([mcur, ttl[:34], A.MR.MIRROR_WHY.get(ttl, A.MR.MIRROR_WHY.get(core, u"源冊自照"))]))
+io.open(os.path.join(HERE, u"鏡位清冊.tsv"), "w", encoding="utf-8", newline="\n").write(
+    "\n".join(mrows) + "\n")
+_mwhy = {}
+for _r in mrows:
+    _mwhy[_r.split(u"\t")[2]] = _mwhy.get(_r.split(u"\t")[2], 0) + 1
+print(u"鏡位清冊：%d 案（%s）" % (len(mrows), u"・".join(
+    u"%s×%d" % (k, v) for k, v in sorted(_mwhy.items()))))
+
 io.open(OUT, "w", encoding="utf-8", newline="\n").write(book + u"\n")
 n = len(book.split("\n"))
 cjk = len(re.findall(u"[\\u3400-\\u9fff]", book))
@@ -882,5 +899,8 @@ print(u"案例：%d（框架 115＋護欄 164－同案合一 %d－真合併 %d�
     A.SENT[u"mirror_fill"], A.RELINK[u"n"], A.RELINK[u"case"]))
 print(u"真合併：併案之段棄其重複 %d・主案之欄增益 %d（敘事不兩出、正理兩存）" % (
     A.SENT[u"merge_drop"], A.SENT[u"merge_fold"]))
+print(u"心相照鏡之齊：源冊自照 %d・補遺親筆 %d・轉剖析而立 %d・無骨可轉 %d" % (
+    A.SENT[u"second_ok"], A.SENT[u"mirror_fill"], A.SENT[u"mirror_gen"], A.SENT[u"mirror_nog"]))
+print(u"　轉位之所依：%s" % u"・".join(u"%s×%d" % (k, v) for k, v in sorted(A.MR.FRAME_LOG.items())))
 for k in sorted(STATS):
     print(u"　規則 %-10s %d" % (k, STATS[k]))

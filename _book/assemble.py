@@ -483,7 +483,20 @@ def render_case(idx, title, fw_code, hl_case):
         f_mir = MR.MIRROR_FILL[fw_code]
         body[u"心相照鏡"] = f_mir
         SENT[u"mirror_fill"] += 1
+        MR.MIRROR_WHY[title] = u"補遺親筆"
         ok = True
+    if not body.get(u"心相照鏡") and body.get(u"法相剖析"):
+        # 奉令②・統一六段：無鏡之案，即本案剖析之骨幹轉一機位（不增一義，只換一位）
+        why, g = MR.make_mirror(body[u"法相剖析"], idx)
+        if g:
+            body[u"心相照鏡"] = g
+            SENT[u"mirror_gen"] += 1
+            MR.MIRROR_WHY[title] = why
+        else:
+            SENT[u"mirror_nog"] += 1
+            MR.MIRROR_WHY[title] = u"無骨可轉"
+    elif f_mir and title not in MR.MIRROR_WHY:
+        MR.MIRROR_WHY[title] = u"源冊自照"
     if fw_code:
         SENT["second_ok" if ok else "second_missing"] += 1
     jud = [relink(f.get(u"佛陀處斷", u""), u"v")]
@@ -538,7 +551,8 @@ def render_case(idx, title, fw_code, hl_case):
 
 WIS_LEAD = [u"我們共勉：", u"我們同道共勉：", u"我們同勘此心：", u"我們且共勉："]
 SENT = {u"second_ok": 0, u"second_missing": 0, u"case": 0, u"fw_only": 0, u"hl_only": 0,
-        u"mirror_fill": 0, u"merge_fold": 0, u"merge_drop": 0}
+        u"mirror_fill": 0, u"merge_fold": 0, u"merge_drop": 0,
+        u"mirror_gen": 0, u"mirror_nog": 0}
 USED_FW = set()
 
 
