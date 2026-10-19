@@ -715,6 +715,34 @@ if alt:
 else:
     note(u"書名唯一：全冊自稱唯《佛陀的護欄》，判準『以遮衛性』不入書名之格")
 
+# ── 卅一・題詞引號之制：自標義引／大意／撮舉者，外層不得為單層角引號 ──────
+EPI = re.compile(u"^> \\*\\*\u300c")
+ATTR = re.compile(u"\u7fa9\u5f15|\u5927\u610f|\u62ec\u65e8|\u6458\u8a33|\u64ae\u8209|\u4eca\u8b6f|\u6539\u7de8|\u62ec\u800c\u8ff0\u4e4b")
+viol = []
+for i, l in enumerate(BL, 1):
+    if EPI.match(l) and ATTR.search(u"\n".join(BL[i - 1:i + 4])):
+        viol.append(u"L%d" % i)
+apa = [u"L%d" % i for i, l in enumerate(BL, 1) if u"\uff08\u9ad4\u4f8b\u51e1\u4f8b" in l or u"\uff08\u6848\u4f8b\u4e4b\u5206\u7d44\u5f9e\u984c" in l]
+if viol or apa:
+    bad(u"引號之制破口：義引挂單層角引號 %s｜章內道歉括號 %s" % (
+        u",".join(viol[:5]), u",".join(apa[:5])))
+else:
+    note(u"引號之制：自標義引／大意之題詞俱挂雙層角引號，章內不復自我申辯（凡例第九條總領）")
+
+# ── 卅二・卷首各文件之序號須自一連貫（一卷首文件一序列，不得兩出）──────────
+files = [(i, l) for i, l in enumerate(BL, 1) if l.startswith(u"## \u3010")]
+CN = u"\u96f6\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d\u5341"
+dups = []
+for k, (i, l) in enumerate(files):
+    j = files[k + 1][0] - 1 if k + 1 < len(files) else len(BL)
+    nums = [SQ.cnum(m.group(1)) for m in re.finditer(u"^\u3000*\\*\\*([\u4e00-\u534b]+)\u30fb", u"\n".join(BL[i:j]), re.M)]
+    if nums and nums != list(range(1, len(nums) + 1)):
+        dups.append(u"%s：%s" % (l[3:21], u",".join(str(x) for x in nums)))
+if dups:
+    bad(u"卷首序號兩出或斷頭 %d 件：%s" % (len(dups), u"｜".join(dups[:4])))
+else:
+    note(u"卷首序號：%d 個文件之小目俱自一連貫，無『兩套四、兩套五』" % len(files))
+
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
     print(u"\n".join(u"✗ " + x for x in FAIL))

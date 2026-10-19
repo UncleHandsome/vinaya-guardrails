@@ -129,7 +129,9 @@ def body_of(ch):
     elif ch == u"第十九章":
         j = [A.vminus(u"四", u"第五節"), T.RULING_SELF]
     elif ch == u"第二十章":
-        j = [A.vch(u"四", u"第五節"), A.hsec(u"十", u"七滅諍")]
+        pre = u"\n\n".join([A.vch(u"四", u"第五節"), A.hsec(u"十", u"七滅諍")])
+        txt, n = A.cases_of(ch)
+        j = splice(pre, txt) if n else [pre]
     elif ch == u"第二十一章":
         j = [A.vch(u"五"), T.EDGE_SMALL]
     elif ch in (u"第二十二章", u"第二十三章", u"第二十四章"):
@@ -461,9 +463,47 @@ POLISH = [
 ]
 
 
+ATTR_NONVERB = re.compile(u"\u7fa9\u5f15|\u5927\u610f|\u62ec\u65e8|\u6458\u8a33|\u64ae\u8209|\u4eca\u8b6f|\u6539\u7de8")
+EPI_QUOTE = re.compile(u"^> \\*\\*([\u300c])(.+?)([\u300d])\\*\\*\\s*$")
+INLINE_APA = re.compile(u"\uff08\u9ad4\u4f8b\u51e1\u4f8b[^\uff09]{1,400}\uff09|\uff08\u6848\u4f8b\u4e4b\u5206\u7d44\u5f9e\u984c\u4e0d\u5f9e\u865f[^\uff09]{1,200}\uff09")
+
+
+def epigraphs(text):
+    """凡例第三層之兌現：章首題詞若自標『義引／大意／撮舉』，外層不得挂單層角引號。
+       內層之『『』』乃引中之引，與外層對調，使單層唯留逐字之文。"""
+    lines = text.split(u"\n")
+    out = []
+    n = 0
+    for i, l in enumerate(lines):
+        m = EPI_QUOTE.match(l)
+        if m:
+            look = u"\n".join(lines[i:i + 4])
+            if ATTR_NONVERB.search(look):
+                inner = m.group(2).replace(u"\u300e", u"\uff62").replace(u"\u300f", u"\uff63")
+                inner = inner.replace(u"\u300c", u"\u300e").replace(u"\u300d", u"\u300f")
+                inner = inner.replace(u"\uff62", u"\u300c").replace(u"\uff63", u"\u300d")
+                l = u"> **\u300e" + inner + u"\u300f**"
+                n += 1
+        out.append(l)
+    print(u"　題詞降格：自標非逐字者改挂雙層角引號（%d 處）" % n)
+    return u"\n".join(out)
+
+
+def scrub_apology(text):
+    """章末之『體例凡例』道歉括號一律剷除——其約已歸凡例第九條，正文不復自辯。"""
+    hits = INLINE_APA.findall(text)
+    t = INLINE_APA.sub(u"", text)
+    t = re.sub(u"[ \u3000]+(？|！|。|；)", u"\\1", t)
+    t = re.sub(u"（\s*）", u"", t)
+    print(u"　剷道歉括號：%d 處（其約歸凡例第九條）" % len(hits))
+    return t
+
+
 def final_polish(text):
     text, nbox = rebox(text)
     print(u"　定稿修：樹圖去額並補白（%d 行）" % nbox)
+    text = scrub_apology(text)
+    text = epigraphs(text)
     hit = 0
     for old, new, why in POLISH:
         if old is None:

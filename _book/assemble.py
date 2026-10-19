@@ -429,7 +429,9 @@ PLAN = {}          # 新章 → [(標題, 框架碼 or None, 護欄案 or None)]
 def _plan(new_chap, hl_src_chap):
     items = []
     cset = P.hl_cases(hl, *HL_SP[_k(hl_src_chap)][:2]) if hl_src_chap else []
-    seq = HL_HOME.get(hl_src_chap, [])
+    # 一案源可分授數章（如護欄第十章：眾學法諸案留第十二章，七滅諍三案歸第二十章），
+    # 故本章之案須逐案照落點表取，不得把該源全部案例倒進每一章。
+    seq = [cid for (hc, cid), ch in PLACE_HL.items() if hc == hl_src_chap and ch == new_chap]
     for ordn, htitle, hp, hq, raw in cset:
         if u"案例%s" % P.cn_num(ordn) not in seq:
             continue
@@ -453,7 +455,8 @@ def _plan(new_chap, hl_src_chap):
 CASE_CHAPS = [(u"第七章", u"第五章"), (u"第八章", u"第六章"), (u"第九章", u"第七章"),
               (u"第十章", u"第八章"), (u"第十一章", u"第九章"), (u"第十二章", u"第十章"),
               (u"第十三章", u"第十一章"), (u"第十四章", None), (u"第十五章", u"第十二章"),
-              (u"第十六章", u"第十三章"), (u"第十七章", u"第十四章"), (u"第十八章", u"第十五章")]
+              (u"第十六章", u"第十三章"), (u"第十七章", u"第十四章"), (u"第十八章", u"第十五章"),
+              (u"第二十章", u"第十章")]   # 七滅諍三案隨其篇聚歸此（其文已在第二十章第二節）
 for _c, _h in CASE_CHAPS:
     PLAN[_c] = _plan(_c, _h)
 
