@@ -101,6 +101,7 @@ BANNED = [
     (u"！！！|看哪|何其可怕|無恥之尤", u"咆哮體"),
     (u"〔校勘|〔待校", u"校勘痕跡"),
     (u"第三十八版|Ver ?[0-9]+|合規率|校驗程序|[0-9]+/[0-9]+ 全部|起心動念心智分析框架", u"舊版印記"),
+    (u"第[一二三四五六七八九十]+版|全套修訂歷程|刪併之跡|編號由 H-0 徑接 H-2", u"修訂歷程印記"),
 ]
 for pat, name in BANNED:
     n = cnt(pat)
@@ -569,6 +570,94 @@ if wrong_s:
     bad(u"指針自證破口 %d 條：%s" % (len(wrong_s), u"｜".join(sorted(set(wrong_s))[:5])))
 elif n_s:
     note(u"指針自證：%d 條自報節題者，題俱在所指之節" % n_s)
+
+# ── 廿一・定額與平帳之載體須窮舉（正文區不得有案例之定額、矩陣之空格）──────
+CUT_APX = book.find(u"# 【卷末・工具與附錄】")
+MAIN = book[:CUT_APX if CUT_APX > 0 else len(book)]
+QUOTA = [u"100 片", u"100 則", u"百則", u"遮止 45", u"開許 25", u"僧伽 30",
+         u"四十五則", u"二十五則", u"三十則", u"空格", u"填白", u"檢索式", u"口徑定義", u"切分標準"]
+qhit = []
+APX_LN = (MAIN.count(NL) + 1) if CUT_APX > 0 else len(BL)
+MAIN_Q = u"\n".join(BL[:APX_LN - 1][:fan_i - 1] + BL[:APX_LN - 1][fan_j - 1:]) if fan_i \
+    else u"\n".join(BL[:APX_LN - 1])
+for pat in QUOTA:
+    for m in re.finditer(re.escape(pat), MAIN_Q):
+        qhit.append(u"%s（L%d）" % (pat, MAIN_Q[:m.start()].count(NL) + 1))
+if qhit:
+    bad(u"正文仍有定額／平帳之載體 %d 處：%s" % (len(qhit), u"｜".join(qhit[:6])))
+else:
+    note(u"定額載體：正文區已窮舉查清（圖・表・標題・內文俱無 100／45／25／30 之額）")
+
+# ── 廿二・正文標題不得帶附錄開發代碼（H-0／I-1 一类）─────────────────────
+codeh = [l.strip()[:44] for i, l in enumerate(BL, 1)
+         if i < APX_LN and l.startswith(u"#") and re.search(u"[A-Z]-[0-9]", l)]
+if codeh:
+    bad(u"正文標題仍帶代碼 %d 條：%s" % (len(codeh), u"｜".join(codeh[:5])))
+else:
+    inline = [u"L%d「%s」" % (i, m.group(0)) for i, l in enumerate(BL[:APX_LN - 1], 1)
+              if not l.startswith(u"#") and not l.strip().startswith(u"|")
+              for m in [re.search(u"〔[遺補][0-9]+〕|(?<!附錄[一二三四五]・)[A-Z]-[0-9]", l)] if m]
+    if inline:
+        bad(u"正文內文仍夾附錄代碼 %d 處：%s" % (len(inline), u"｜".join(inline[:5])))
+    else:
+        note(u"標題去碼：正文區標題與內文俱無附錄代碼（代碼唯存附錄，為書中索引之的）")
+
+# ── 廿三・案例須掛於其宣言之節（不得全數堆於結語之下）───────────────────
+ST2 = SQ.sec_blocks(BL)
+per_c = collections.OrderedDict()
+for c, o, a, b in ST2:
+    per_c.setdefault(c, []).append((o, len(re.findall(u"^### 案例", u"\n".join(BL[a - 1:b]), re.M)), BL[a - 1]))
+orphan, empty = [], []
+for c, v in per_c.items():
+    tot = sum(n for _, n, _ in v)
+    if not tot:
+        continue
+    if v[-1][1] == tot and len(v) > 1 and not re.search(u"案例解碼|案例深度|深度案例|核心案例|案發現場|現行犯", v[-1][2]):
+        orphan.append(u"%s（%d 案皆掛『%s』）" % (c, tot, v[-1][2][3:23]))
+    for o, n, h in v:
+        if n == 0 and re.search(u"案例解碼|案例深度|深度案例|核心案例|案發現場|現行犯", h):
+            empty.append(u"%s 第%s節（%s）" % (c, SQ.cn_num(o), h[3:23]))
+if orphan or empty:
+    bad(u"案例掛載之縫：%s%s" % (u"｜".join(orphan[:4]), u"｜".join(empty[:4])))
+else:
+    note(u"案例掛載：12 章之案俱在其『案例解碼』節內，無宣案例之空節、無堆於結語之末節")
+
+# ── 廿四・謝幕唯一（大總結與尾聲不得另立第二處終局）─────────────────────
+fin = [pat for pat in [u"全書大總結", u"## 尾聲", u"终聲"] if pat in book]
+if fin:
+    bad(u"另有謝幕之題：%s" % u"｜".join(fin))
+else:
+    note(u"終局唯一：全書謝幕唯在第二十八與終卷，他處不立『大總結』『尾聲』之題")
+
+# ── 廿五・詞頻之數不踰正文（夾注與引文內聽其如實）───────────────────────
+FREQ = re.compile(u"出現 [1-9][0-9]* 次|[1-9][0-9]* 次|凡 [1-9][0-9]* 見|[1-9][0-9]* 見|本地語料|本律語料")
+def bare(s):
+    s = re.sub(u"〔案：[^〕]*〕", u"", s)
+    return re.sub(u"「[^」]*」|『[^』]*』", u"", s)
+fhit = []
+for i, l in enumerate(BL[:APX_LN - 1], 1):
+    if l.startswith(u"#"):
+        continue
+    m = FREQ.search(bare(l))
+    if m:
+        fhit.append(u"L%d「%s」" % (i, m.group(0)))
+if fhit:
+    bad(u"正文仍有詞頻之數 %d 行：%s" % (len(fhit), u"｜".join(fhit[:6])))
+else:
+    note(u"詞頻之數：正文無統計之數（考據計數唯在夾注與附錄）")
+
+# ── 廿六・人稱機位不得互竄（引文內不計）─────────────────────────────────
+cross = []
+for m in SEC.finditer(book):
+    txt = bare(m.group(2))
+    if m.group(1) == u"心相照鏡" and u"我們" in txt:
+        cross.append(u"心相含『我們』L%d" % (book[:m.start()].count(NL) + 1))
+    if m.group(1) == u"人間智慧與行持" and re.search(u"你", txt):
+        cross.append(u"智慧含『你』L%d" % (book[:m.start()].count(NL) + 1))
+if cross:
+    bad(u"人稱互竄 %d 段：%s" % (len(cross), u"｜".join(cross[:6])))
+else:
+    note(u"人稱機位：心相唯『你』、智慧唯『我們』，引文內不計，互竄 0 段")
 
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
