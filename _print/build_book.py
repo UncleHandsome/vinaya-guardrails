@@ -32,9 +32,10 @@ SCREEN = any("screen" in a or u"螢幕" in a for a in _ARGS)
 NOSEED = any("noseed" in a for a in _ARGS)
 TAGL = u"螢幕版" if SCREEN else u"影印版"
 SFX = "_screen" if SCREEN else ""
-STEM = u"佛陀的護欄_四分律行為心理學與現代僧伽治理_" + TAGL
+STEM = u"佛陀的護欄_重構版_" + TAGL
 
-SRC = os.path.join(ROOT, u"佛陀的護欄_四分律行為心理學與現代僧伽治理.md")
+# 冊身今為《重構版》（20 章・5 篇＋終卷）；產器 `_book/build.py` 已退為歷史，其輸出留檔對校
+SRC = os.path.join(ROOT, u"佛陀的護欄_重構版.md")
 if not os.path.isfile(SRC):
     raise SystemExit(u"找不到冊身（先跑 python -X utf8 _book/build.py）")
 
@@ -51,11 +52,12 @@ BH.LAYOUT = u"screen" if SCREEN else u"print"
 BH.FENCE_BLOCKS = []
 b38.MD, b38.HTML, b38.FINAL, b38.PDF = MD, HTML, FINAL, PDF
 b38.SUFFIX = u"_book"
-BH.PART = re.compile(u"【(?:第[一二三四五六七]部：[^】]*|卷末・工具與附錄)】|^# 終卷|^# 佛陀的護欄")
+BH.PART = re.compile(u"【(?:第[一二三四五六七八九十]+[部篇]：[^】]*|卷末・工具與附錄[^】]*|終卷：[^】]*)】"
+                     u"|^# 終卷|^# 佛陀的護欄")
 TOC_ANCHOR_RE = re.compile(u"^# 第一章　", re.M)
 
 BOOK_TITLE = u"佛陀的護欄"
-EDITION = u"合編本・" + TAGL
+EDITION = u"重構定本・" + TAGL
 MD_TOC_HEAD = u"## 【本書總目錄】"
 
 TOOL = [(u"`_book/build.py`", u"本冊產製法則"), (u"`_book/check.py`", u"校刊驗尺"),
@@ -63,12 +65,11 @@ TOOL = [(u"`_book/build.py`", u"本冊產製法則"), (u"`_book/check.py`", u"�
         (u"relink", u"指針重算"), (u"build.py", u"產製法則"), (u"check.py", u"驗尺")]
 RESIDUE = re.compile(u"_book/|relink|build\\.py|check\\.py|POLISH|SHA|pandoc")
 
-# 目錄所收：部（1）・章（2）・節（3）；附錄與終卷作 1 級（其下小目不列）
-RE_PART = re.compile(u"^# 【第[一二三四五六七]部：(.+?)】$")
+# 目錄所收：篇（1）・章（2）・節（3）；附錄與終卷／卷末亦列
+RE_SEC1 = re.compile(u"^# (【.+】)$")                     # 篇・終卷・卷末（皆帶【】之 H1）
 RE_CHAP = re.compile(u"^# (第[一二三四五六七八九十]+章　.+)$")
 RE_SEC = re.compile(u"^## (第[一二三四五六七八九十]+節　.+)$")
 RE_APX = re.compile(u"^## (附錄[一二三四五六七八九十][　 ].+)$")
-RE_TAIL = re.compile(u"^# (終卷.+|佛陀的護欄.*)$")
 
 
 def de_adorn(lines):
@@ -101,17 +102,11 @@ def toc_entries(lines):
     cnt, out = {}, []
     for l in lines:
         lvl, title = 0, u""
-        m = RE_PART.match(l)
-        if m:
-            title, lvl = u"【" + m.group(1) + u"】", 1
-        elif RE_CHAP.match(l):
-            title, lvl = RE_CHAP.match(l).group(1), 2
-        elif RE_SEC.match(l):
-            title, lvl = RE_SEC.match(l).group(1), 3
-        elif RE_APX.match(l):
-            title, lvl = RE_APX.match(l).group(1), 2
-        elif RE_TAIL.match(l):
-            title, lvl = RE_TAIL.match(l).group(1), 2
+        for rx, lv in ((RE_SEC1, 1), (RE_CHAP, 2), (RE_SEC, 3), (RE_APX, 2)):
+            m = rx.match(l)
+            if m:
+                title, lvl = m.group(1).strip(), lv
+                break
         if not lvl:
             continue
         base = b38.strip_md(title).replace("|", u"｜")
@@ -174,7 +169,7 @@ COVER = u"""<section id="print-cover" class="cov">
     <div class="cov-sutra">佛陀的護欄</div>
     <div class="cov-title">四分律行為心理學與現代僧伽治理</div>
     <div class="cov-rule"></div>
-    <p class="cov-sub">兩書合編本——七部二十八章·判例與心所並陳</p>
+    <p class="cov-sub">__SUB__</p>
     <p class="cov-motto">小戒不是鎖鏈　小戒是安全氣囊<br />
        律不與人性賭博　只預先修築護欄</p>
     <p class="cov-cap">__APPS__<br />原典：漢譯《四分律》六十卷·大正藏 No.1429《戒本》</p>
@@ -191,8 +186,9 @@ def cover_counts(src_txt):
     n_chap = len(re.findall(u"^# 第[一二三四五六七八九十]+章　", src_txt, re.M))
     n_sec = len(re.findall(u"^## 第[一二三四五六七八九十]+節", src_txt, re.M))
     n_case = len(re.findall(u"^### 案例", src_txt, re.M))
-    n_apx = len(re.findall(u"^## 附錄[一二三四五]", src_txt, re.M))
-    return u"七部・%d 章・%d 節・%d 案・附錄 %d 篇" % (n_chap, n_sec, n_case, n_apx)
+    n_part = len(re.findall(u"^# 【第[一二三四五六七八九十]+[部篇]：", src_txt, re.M))
+    n_apx = len(re.findall(u"^## 附錄[一二三四五六七八九十]", src_txt, re.M))
+    return u"%d 篇・%d 章・%d 節・%d 案・附錄 %d 件" % (n_part, n_chap, n_sec, n_case, n_apx)
 
 
 def render_once(entries, pages, pre_sizes):
@@ -290,6 +286,7 @@ def main():
     src_txt = u"\n".join(lines)
     b38.COVER, b38.EDITION = COVER, EDITION
     b38.APPS = cover_counts(src_txt)
+    b38.COVER = COVER.replace(u"__SUB__", u"%s——判例與心所並陳" % b38.APPS)
     print(u"封面計數（自冊身取，不手打）：%s" % b38.APPS)
     hs = BH.headings(lines)
     BH.FENCE_BLOCKS = BH.fence_blocks(lines)
