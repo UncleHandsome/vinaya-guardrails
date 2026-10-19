@@ -251,6 +251,22 @@ elif not os.path.exists(LED):
 else:
     note.append(u"尺九 款級之賬清零（債帳 %s 可歸檔）" % os.path.basename(LED))
 
+# ── 尺十 圍欄內之自宣（書對自身結構之圖，諸尺掃不到，另立一檢）──
+BOX_BAD = []
+inp = False
+for _i, _l in enumerate(L, 1):
+    if _l.startswith(u"```"):
+        inp = not inp
+        continue
+    if not inp:
+        continue
+    if re.search(u"第[一二三四五六七八九]部|[五六七八九]部|終卷|二十[五六七八]–|第二十[五六七八]章|第廿[五六七八]章", _l):
+        BOX_BAD.append((_i, _l.strip()[:40]))
+if BOX_BAD:
+    bad.append(u"尺十 圍欄內仍有舊結構之自宣 %d 行：%s" % (len(BOX_BAD), BOX_BAD[:3]))
+else:
+    note.append(u"尺十 圍欄內之自宣俱依今制（無『N部／終卷／二十八章』之類舊形）")
+
 print(u"\n".join(u"  ✓ " + x for x in note))
 print(u"病 %d 目" % len(bad))
 for x in bad:
