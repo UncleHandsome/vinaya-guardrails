@@ -267,6 +267,63 @@ if BOX_BAD:
 else:
     note.append(u"尺十 圍欄內之自宣俱依今制（無『N部／終卷／二十八章』之類舊形）")
 
+# ── 尺十一 台帳對案（附錄二『書中』欄 vs 案例標題自列之條號）────
+GRP = {u"四波羅夷": 5, u"十三僧殘": 6, u"二不定法": 6, u"三十捨墮": 7, u"九十單提": 8, u"四提舍尼": 9}
+plan = {}
+_c = 0
+for _l in L:
+    m = re.match(u"^# 第([一二三四五六七八九十]+)章", _l)
+    if m:
+        _c = cnum(m.group(1))
+        continue
+    m = re.match(u"^### 案例([一二三四五六七八九十百]+)：(.*)$", _l)
+    if not m or not _c:
+        continue
+    k, t = cnum(m.group(1)), m.group(2)
+    got = set(int(x) for x in re.findall(u"第([0-9]+)條", t))
+    for mm in re.finditer(u"第([0-9]+)、([0-9]+)(?:、([0-9]+))?(?:、([0-9]+))?條", t):
+        got.update(int(x) for x in mm.groups() if x)
+    for mm in re.finditer(u"第([一二三四五六七八九十]+)至第?([一二三四五六七八九十]+)(?:僧殘|波羅夷|捨墮|單提)", t):
+        a, b = cnum(mm.group(1)), cnum(mm.group(2))
+        if a and b:
+            got.update(range(a, b + 1))
+    for mm in re.finditer(u"第([一二三四五六七八九十]+)(僧殘|波羅夷|捨墮)", t):
+        v = cnum(mm.group(1))
+        if v:
+            got.add(v)
+    for mm in re.finditer(u"第([一二三四五六七八九十]+)、第?([一二三四五六七八九十]+)(?:僧殘|波羅夷|捨墮|單提)?", t):
+        got.update(v for v in (cnum(x) for x in mm.groups() if x) if v)
+    if not got or _c not in (5, 6, 7, 8, 9):
+        continue
+    g = u"二不定法" if (_c == 6 and u"不定" in t) else \
+        {5: u"四波羅夷", 6: u"十三僧殘", 7: u"三十捨墮", 8: u"九十單提", 9: u"四提舍尼"}[_c]
+    for n in got:
+        plan[(g, n)] = (_c, k)
+gname = None
+mism = 0
+checked = 0
+for _l in L:
+    hm = re.match(u"^### [甲乙]、比丘尼?戒本：(.+?)（", _l)
+    if hm:
+        gname = next((g for g in GRP if g in hm.group(1)), None)
+        if gname:
+            gname = hm.group(1)[:4]
+        continue
+    rm = re.match(u"^(\d+)\.\s*[「『]", _l)
+    if not rm or gname is None:
+        continue
+    want = plan.get((gname, int(rm.group(1)))) or plan.get((gname + u"法", int(rm.group(1))))
+    mm = re.search(u"｜書中[：:]第([一二三四五六七八九十]+)章案例([一二三四五六七八九十百]+)", _l)
+    if want and mm:
+        checked += 1
+        if (cnum(mm.group(1)), cnum(mm.group(2))) != want:
+            mism += 1
+if mism:
+    bad.append(u"尺十一 台帳錯案 %d 行（表所載『書中』與案例標題自列之條號不合）" % mism)
+else:
+    note.append(u"尺十一 台帳對案：%d 行『戒條→書中章案』與案例標題自列之條號一一合（%d 條可推）"
+                % (checked, len(plan)))
+
 print(u"\n".join(u"  ✓ " + x for x in note))
 print(u"病 %d 目" % len(bad))
 for x in bad:
