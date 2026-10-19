@@ -659,6 +659,62 @@ if cross:
 else:
     note(u"人稱機位：心相唯『你』、智慧唯『我們』，引文內不計，互竄 0 段")
 
+# ── 廿七・章級指針之自證（指針緊冠章題關鍵語者，其語須真屬所冠之章）────────
+cmap = SQ.chapter_map(BL)
+own = SQ.title_owners(cmap)
+bad_claim = []
+for i, l in enumerate(BL[:APX_LN - 1], 1):
+    if l.startswith(u"#"):
+        continue
+    for m in SQ.REF_H.finditer(l):
+        win = l[max(0, m.start() - 8):m.start()] + l[m.end():m.end() + 28]
+        for w in SQ.TITLE_KEY.findall(win):
+            chs = own.get(w)
+            if chs and len(chs) == 1 and len(w) >= 4 and chs[0] not in m.group(0):
+                bad_claim.append(u"L%d %s 冠『%s』（實屬%s）" % (i, m.group(0), w, chs[0]))
+            break
+if bad_claim:
+    bad(u"章級指針失指 %d 條：%s" % (len(bad_claim), u"｜".join(bad_claim[:5])))
+else:
+    note(u"章級自證：指針緊冠章題者，其語俱屬所冠之章（兩屬之題不計）")
+
+# ── 廿八・終卷與卷首之 H2 不得帶章內節號 ────────────────────────────────
+zstart = next((i for i, l in enumerate(BL, 1) if l.startswith(u"# 終卷")), len(BL))
+sec_in_tail = [l.strip()[:40] for i, l in enumerate(BL, 1)
+               if i >= zstart and re.match(u"^## 第[一二三四五六七八九十]+節", l)]
+if sec_in_tail:
+    bad(u"終卷之內仍帶章內節號 %d 條：%s" % (len(sec_in_tail), u"｜".join(sec_in_tail[:4])))
+else:
+    note(u"終卷之題：不受章內節次，無『第N節』之誤掛")
+
+# ── 廿九・附錄自帳：F-3 所點名之 F-1 行須真在 F-1 表內 ────────────────────
+def _seg(head, nxts):
+    i = book.find(head)
+    if i < 0:
+        return None, None
+    js = [book.find(x, i + 1) for x in nxts]
+    js = [j for j in js if j > 0]
+    return i, (min(js) if js else len(book))
+i1, j1 = _seg(u"### F-1", [u"### F-2", u"### F-3"])
+i3, j3 = _seg(u"### F-3", [u"### F-4", u"# 終卷"])
+ghost = []
+if i1 is not None and i3 is not None:
+    f1 = book[i1:j1]
+    for m in re.finditer(u"F-1\uff08([^）]{2,40})\uff09", book[i3:j3]):
+        if m.group(1) not in f1:
+            ghost.append(m.group(1))
+if ghost:
+    bad(u"附錄五 F-3 審問幽靈條目 %d：%s" % (len(ghost), u"／".join(ghost[:4])))
+elif i1 is not None:
+    note(u"附錄自帳：F-3 逐條所點名之 F-1 行，俱在 F-1 表內")
+
+# ── 三十・書名唯一（不得以判準之名為書名）──────────────────────────────
+alt = re.findall(u"\u300a\u4ee5\u906e\u885b\u6027\u300b|\u300a\u6839\u672c\u5fc3|\u300a\u8d77\u5fc3\u52d5\u5ff5", book)
+if alt:
+    bad(u"書名不一（別以判準為書名）：%s" % u"／".join(sorted(set(alt))))
+else:
+    note(u"書名唯一：全冊自稱唯《佛陀的護欄》，判準『以遮衛性』不入書名之格")
+
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:
     print(u"\n".join(u"✗ " + x for x in FAIL))

@@ -338,3 +338,94 @@ def land_named(text):
     t = pass_once(text)
     t = pass_once(t)          # 兩輪：第一輪歸位之後，節內實數已變，再核一次以免餘漏
     return t, moved, stuck
+
+
+# ── 章級指針之自證：指針若緊冠某章之章題關鍵語，落點即該章 ─────────────────
+CHAPTER_H1 = re.compile(u"^# (第[一二三四五六七八九十]+章)[　 ]+(.*)$")
+TITLE_KEY = re.compile(u"[\\u3400-\\u9fff]{4,10}")
+SEP_ALL = re.compile(u"[，、・：；（）【】｜—─·與及暨\\s]+")
+REF_H = re.compile(u"第(?:[一二三四五六七八九十]+|[一二三四五六七八九十]+、[一二三四五六七八九十]+"
+                   u"|[一二三四五六七八九十]+至第?[一二三四五六七八九十]+)章")
+
+
+def chapter_map(lines):
+    """{章名 : （章題, 章身文本)}。"""
+    out = {}
+    cur = None
+    t = u""
+    buf = []
+    for l in lines:
+        m = CHAPTER_H1.match(l)
+        if m:
+            if cur:
+                out[cur] = (t, u"\n".join(buf))
+            cur, t, buf = m.group(1), m.group(2), []
+            continue
+        if l.startswith(u"# ") and cur:
+            out[cur] = (t, u"\n".join(buf))
+            cur, buf = None, []
+            continue
+        if cur:
+            buf.append(l)
+    if cur:
+        out[cur] = (t, u"\n".join(buf))
+    return out
+
+
+def title_owners(cmap):
+    """{章題關鍵語 : [所屬章]}——章題之詞唯歸其章。"""
+    own = {}
+    for ch, (t, _) in cmap.items():
+        for seg in SEP_ALL.split(t):
+            for w in TITLE_KEY.findall(seg):
+                own.setdefault(w, [])
+                if ch not in own[w]:
+                    own[w].append(ch)
+    return own
+
+
+def land_chapter_claims(text, skip=()):
+    """指針之後（或之前）若緊接某章之章題關鍵語，該語便是它自我申報的落點；
+       所冠之章與關鍵語所屬之章不合者歸其所屬；關鍵語兩屬者不改，如實呈報。"""
+    lines = text.split(u"\n")
+    own = title_owners(chapter_map(lines))
+    moved = []
+    stuck = []
+    words = sorted(own, key=len, reverse=True)
+    words = [w for w in words if w not in skip]
+
+    def fix(l):
+        out = u""
+        pos = 0
+        for m in REF_H.finditer(l):
+            out += l[pos:m.start()]
+            ref = m.group(0)
+            nxt = l[m.end(): m.end() + 3]
+            if nxt.startswith(u"案例") or re.match(u"第[0-9]", nxt):
+                out += ref          # 案級／條級之指針已由產器落地，此处只治章級之誤冠
+                pos = m.end()
+                continue
+            win = l[max(0, m.start() - 8):m.start()] + l[m.end():m.end() + 28]
+            hit = None
+            for w in words:
+                if w in win:
+                    chs = own[w]
+                    if len(chs) != 1:
+                        continue
+                    if chs[0] not in ref:
+                        hit = (w, chs[0])
+                    break
+            if hit:
+                moved.append(u"%s → %s（據章題『%s』）" % (ref, hit[1], hit[0]))
+                out += hit[1]
+            else:
+                for w in words:
+                    if w in win and len(own[w]) > 1:
+                        stuck.append(u"%s 所冠『%s』兩屬：%s" % (ref, w, u"／".join(own[w])))
+                        break
+                out += ref
+            pos = m.end()
+        return out + l[pos:]
+
+    res = [l if l.startswith(u"#") else fix(l) for l in lines]
+    return u"\n".join(res), moved, stuck

@@ -448,6 +448,16 @@ POLISH = [
   u"正文引附錄，稱其名而不帶其碼"),
  (u"**為何不升格 J-1～J-4 入諸案**", u"**為何不升格附錄四之四案（深水推演）入諸案**",
   u"同上：卷首之說明亦須稱名，不恃代碼"),
+ (u"## 第七節　致同修與後學：從法官的重甲重歸林下清涼",
+  u"## 致同修與後學：從法官的重甲重歸林下清涼", u"終卷乃獨立之後記，不受章內節次"),
+ (u"## 第八節　終局迴向偈（正法得久住·第十句迴向）",
+  u"## 終局迴向偈（正法得久住·第十句迴向）", u"同上"),
+ (u"## 第四節　重新定義自由：從「欲望的奴隸」到「自律的覺者」",
+  u"## 第四節　慾望管理與自律之樂：從「欲望的奴隸」到「自律的覺者」",
+  u"『重新定義自由』乃第二十八章之章題，他章不得再以之為節題（一章一命題）"),
+ (u"## 第七節　調部邊緣疑難判例法專題解析（十五則）",
+  u"## 第七節　調部邊緣疑難判例法之專題解析（其案已列於本章第三節）",
+  u"去『十五則』之額，並標明其案之所在，不使讀者於此節空尋"),
 ]
 
 
@@ -491,6 +501,12 @@ for r in moved:
     print(u"　歸位 " + r)
 for r in stuck:
     print(u"　未定 " + r)
+book, cmoved, cstuck = SQ.land_chapter_claims(book, skip=CM.CHAPTER_CLAIM_SKIP)
+print(u"章級自證：據章題改指 %d 條｜兩屬不決 %d 條" % (len(cmoved), len(cstuck)))
+for r in cmoved[:24]:
+    print(u"　歸章 " + r)
+for r in cstuck[:8]:
+    print(u"　兩屬 " + r)
 nkf = 0
 for bad, good in CM.KUAN_FIX:
     n = book.count(bad)
@@ -524,6 +540,43 @@ def make_toc(text):
 
 
 
+def apx_selfcheck(text):
+    """附錄五之自我對帳：F-3（無從覆核清單）逐條點名 F-1 之某行，
+       若 F-1 表內已無其行，則是審問幽靈——刪其條，並把序號重排，不使底冊自相殘殺。"""
+    def seg(head, nxts):
+        i = text.find(head)
+        if i < 0:
+            return None, None
+        js = [text.find(x, i + 1) for x in nxts]
+        js = [j for j in js if j > 0]
+        return i, (min(js) if js else len(text))
+    i1, j1 = seg(u"### F-1", [u"### F-2", u"### F-3"])
+    i3, j3 = seg(u"### F-3", [u"### F-4", u"# 終卷"])
+    if i1 is None or i3 is None:
+        print(u"附錄自帳：F-1 或 F-3 之段佚，未行")
+        return text
+    f1 = text[i1:j1]
+    body = text[i3:j3]
+    kept, dropped, n = [], [], 0
+    for l in body.split(u"\n"):
+        m = re.match(u"^\\|\\s*([0-9]+)\\s*\\|(.*)$", l)
+        if not m:
+            kept.append(l)
+            continue
+        anchors = re.findall(u"F-1\uff08([^）]{2,40})\uff09", l)
+        ghost = [a for a in anchors if a not in f1]
+        if ghost:
+            dropped.append(u"#%s（F-1 無此『%s』之行）" % (m.group(1), ghost[0]))
+            continue
+        n += 1
+        kept.append(u"| %d |%s" % (n, m.group(2)))
+    print(u"附錄自帳：F-3 存 %d 條｜刪幽靈條 %d：%s" % (n, len(dropped), u"／".join(dropped) or u"無"))
+    if not dropped:
+        return text
+    return text[:i3] + u"\n".join(kept) + text[j3:]
+
+
+book = apx_selfcheck(book)
 toc = make_toc(book)
 book = book.replace(u"# 【第一部：", toc + u"\n\n" + u"# 【第一部：", 1)
 
