@@ -1,0 +1,6 @@
+full rc=0
+slim rc=0
+full screen rc=0
+slim screen rc=0
+full clean rc=0
+full clean screen rc=0

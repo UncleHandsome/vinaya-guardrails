@@ -19,6 +19,10 @@ def cw(s):
     return sum(2 if ord(ch) > 0x2E80 else 1 for ch in s)
 
 
+if not os.path.isfile(HTML):
+    # 待診軸自稱恆退 0：中介 HTML 乃建冊腳手，清場即除——無法源時明報未行，不可崩退壞跑批
+    print('中介 HTML 未在：%s（建冊方生・清場即除）｜此軸未行' % os.path.relpath(HTML, ROOT))
+    sys.exit(0)
 h = io.open(HTML, encoding='utf-8').read()
 tabs = re.findall(r'(?s)<table[^>]*>(.*?)</table>', h)
 bad = []

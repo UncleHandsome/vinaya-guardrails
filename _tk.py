@@ -117,6 +117,16 @@ POS_RE = re.compile(r'^\*\*定位｜根本心：(.+?)｜三環：(.+?)｜八大�
 Q_RE = re.compile(r'「(.+?)」', re.S)
 ELL = re.compile(r'…+|\.{3,}')
 
+# ── 案號之『定義載體』（276 輪・第六章改製之唯一法源）
+#   舊制：一案一節『### 〔案例 NN〕案名』；新制：一案可為三形——
+#     甲・集群矩陣行 `| **〔案例 NN / 代號〕**<br>**案名** | …`
+#     乙・地標／雙螺旋之案號列 `*   **案號**：〔案例 NN〕案名〔・〔案例 MM〕案名…〕`
+#     丙・舊制卡節（他章或舊冊若仍有，一併認）
+#   凡尺問『此案存在嗎・其名何』，一律經 case_defs()，不得各抄一式（238 輪『名單勿兩抄』及印面版）。
+sys.path.insert(0, os.path.join(ROOT, u'_work'))            # 276・共尺之輕模組在 _work（與 _simpdict 同處）
+from _casedef import (CASE_CARD_RE, CASE_ROW_RE, CASE_LANE_RE, CASE_H_RE,  # noqa: E402
+                   CASE_ITEM_RE, _case_nums, case_defs)
+
 
 def bounds():
     b = {}

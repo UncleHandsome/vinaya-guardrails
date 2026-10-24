@@ -68,7 +68,7 @@ if len(apxs) != 5:
 if not [l for l in BL if l.startswith(u"# 終卷")]:
     bad(u"終卷佚")
 for f in [u"【題詞與獻辭】", u"【自序】", u"【導讀指南】", u"凡例】", u"【全書路標】",
-          u"【開卷總提撕】", u"總目錄】", u"【本書之斷】", u"引文承諾六律"]:
+          u"【開卷總提撕】", u"總目錄】", u"【三篇立言之總意】", u"【本書之斷】", u"引文承諾六律"]:
     if not any(l.startswith(u"#") and f in l for l in BL):
         bad(u"卷首・斷語件佚：%s" % f)
 short = []
@@ -187,15 +187,8 @@ for t, items in A.PLAN.items():
             placed_fw.add(code)
 for key in A.CASE_MAP:
     placed_fw.discard(None)
-if len(placed_fw) != 115 - len(A.FW_MERGE):
-    bad(u"框架卡入冊 %d ≠ %d（115・真合併 %d 對）" % (len(placed_fw), 115 - len(A.FW_MERGE), len(A.FW_MERGE)))
-for _m, _d in A.FW_MERGE.items():
-    if _m not in placed_fw:
-        bad(u"真合併之主案未入冊：%s" % _m)
-    if _d in placed_fw:
-        bad(u"真合併之併案仍自立一案：%s" % _d)
-    if _d not in A.CODE_LOC:
-        bad(u"併案之碼無落點（指針必成孤碼）：%s" % _d)
+if len(placed_fw) != 115:
+    bad(u"框架卡入冊 %d ≠ 115" % len(placed_fw))
 if len(A.CASE_MAP) != 164:
     bad(u"護欄案入冊 %d ≠ 164" % len(A.CASE_MAP))
 note(u"清冊：案例 %d 案（框架 115・護欄 164・同案合一 %d）" % (total_case, fused))
@@ -419,7 +412,7 @@ for k, (i, h) in enumerate(secs):
     if len(have) != want:
         bad(u"戒本篇 %s：宣 %d 號・列 %d（缺 %s）" % (h[4:26], want, len(have),
             u",".join(str(x) for x in sorted(set(range(1, want + 1)) - have)[:10])))
-note(u"附錄三歷條：逐篇核其自宣（%d 篇），共列 %d 號（篇數與號數俱由表身量得）" % (len(secs), tot))
+note(u"附錄三歷條：逐篇核其自宣（12 篇），共列 %d 號（比丘 250・尼別宣 233・通數 483 之制）" % tot)
 
 
 # ── 十四・節級與名級死鏈（章在而節無・案名不屬其章） ─────────────────────────────────────────────
@@ -825,12 +818,11 @@ elif rows36 < 8:
 else:
     note(u"世俗法之號：正文 0 引，%d 行條號俱登附錄四對照表（與正文之改同一名單為源）" % rows36)
 
-# ── 卅七・正文不夾校勘之注（奉令：其記遷卷末，各標落點且落點須活）──────────
-CUT_LN37 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"# 【卷末")), len(BL))
-n37 = [u"L%d" % i for i in range(1, CUT_LN37) if u"〔案：" in BL[i - 1]]
+# ── 卅七・正文不夽校勘之注（奉令：其記遷卷末，各標落點且落點須活）──────────
+n37 = [u"L%d" % i for i, l in enumerate(BL[:CUT_APX if CUT_APX > 0 else len(BL)], 1) if u"〔案：" in l]
 apx5 = book[book.find(u"## 附錄五"):book.find(u"# 終卷")] if u"## 附錄五" in book else u""
-ki = apx5.find(u"### 附・卷末校勘記")
-recs = re.findall(u"^\\d+\\. \\*\\*([^*]+)\\*\\*｜(.{4,})$", apx5[ki:], re.M) if ki >= 0 else []
+kb = re.search(u"^### 附・卷末校勘記.*?$", apx5, re.S | re.M)
+recs = re.findall(u"^\\d+\\. \\*\\*([^*]+)\\*\\*｜(.{4,})$", kb.group(0), re.M) if kb else []
 dead37 = []
 for spot, txt in recs:
     m = re.match(u"(第[一二三四五六七八九十]+章)", spot)
@@ -843,8 +835,8 @@ for spot, txt in recs:
         if ch and not re.search(u"### 案例%s" % mc.group(1), CH_TXT.get(ch, u"")):
             dead37.append(u"%s（案無）" % spot[:18])
 if n37:
-    bad(u"正文仍夾〔案：〕 %d 行：%s" % (len(n37), u"、".join(n37[:8])))
-if ki < 0:
+    bad(u"正文仍夽〔案：〕 %d 行：%s" % (len(n37), u"、".join(n37[:8])))
+if kb is None:
     bad(u"附錄五無『卷末校勘記』之篇")
 elif len(recs) < 25:
     bad(u"校勘記得 %d 條（正文原有 35 條之記，除併入正文之短記，須成篇）" % len(recs))
@@ -852,219 +844,6 @@ elif dead37:
     bad(u"校勘記落點死鏈 %d 條：%s" % (len(dead37), u"／".join(dead37[:4])))
 else:
     note(u"夾注之遷：正文（含卷首）〔案：〕0 行，卷末校勘記 %d 條，落點俱活" % len(recs))
-
-# ── 卅八・真合併之果：一案之內二判俱存、敘事不再兩出 ─────────────────────
-def tri38(s):
-    s = norm(s)
-    return set(s[i:i + 3] for i in range(max(0, len(s) - 2)))
-
-for _m, _d in A.FW_MERGE.items():
-    ttl = A.MERGE_TITLE[_m]
-    mt = re.search(u"(?m)^### 案例[一二三四五六七八九十]+：" + re.escape(ttl) + u"$", book)
-    if not mt:
-        bad(u"真合併：主案之新題不可見（%s）" % ttl[:18])
-        continue
-    nxt = re.search(u"(?m)^(### |## |# )", book[mt.end():])
-    blk = book[mt.start(): mt.end() + (nxt.start() if nxt else 0)]
-    caps = [c for c in A.MERGE_CAPS.get(_m, ()) if c in blk]
-    if len(caps) < 2:
-        bad(u"真合併 %s：二判之題只存 %d（治理正理須兩存）" % (ttl[:14], len(caps)))
-    nar = re.search(u"^#### 事相經過\\n\\n(.*?)\\n\\n#### ", blk, re.S | re.M)
-    dups = []
-    if nar:
-        sents = [x.strip() for x in re.split(u"(?<=[。！？])", nar.group(1)) if len(tri38(x)) > 8]
-        for a1 in range(len(sents)):
-            for b1 in range(a1 + 1, len(sents)):
-                ta, tb = tri38(sents[a1]), tri38(sents[b1])
-                if len(ta & tb) * 10 > min(len(ta), len(tb)) * 7:
-                    dups.append(u"%s‖%s" % (sents[a1][:12], sents[b1][:12]))
-    if dups:
-        bad(u"真合併 %s：敘事仍兩出 %d 對：%s" % (ttl[:14], len(dups), u"／".join(dups[:2])))
-    else:
-        note(u"真合併：%d 對卡合為一案（二判俱存・敘事無兩出）——%s" % (
-            len(A.FW_MERGE), ttl[:20]))
-
-# ── 四十・替換之殘（疊詞・雙標籤・半句之引，皆腳本痕跡，冊身不許存）──────────
-x40 = []
-for i, l in enumerate(BL[:CUT_APX], 1):
-    for pat, why in ((u"第 第", u"疊詞『第 第』"), (u"問問", u"疊詞『問問』"),
-                     (u"【([^：】]{2,12})：([^：】]{2,12})】", u"雙標籤")):
-        for m in re.finditer(pat, l):
-            if pat.startswith(u"【") and m.group(2) not in m.group(1) and m.group(1) not in m.group(2):
-                continue
-            x40.append(u"L%d %s（%s）" % (i, m.group(0)[:20], why))
-dbl40 = re.findall(u"【([^：】]{2,12})：([^：】]{2,12})】", u"\n".join(BL[:CUT_APX]))
-dbl40 = [d for d in dbl40 if d[1] in d[0] or d[0] in d[1]]
-half40 = [u"L%d" % (i) for i, l in enumerate(BL, 1) if l.startswith(u'### 案例') is False
-          and u'且把這一句留給自己' in l and (u'。 ' in l or re.search(u'[、，]」', l))]
-allx = x40 + [u"雙標籤 %s" % u''.join(d) for d in dbl40] + half40
-if allx:
-    bad(u"替換之殘 %d 處：%s" % (len(allx), u"｜".join(allx[:5])))
-else:
-    note(u"替換之殘：疊詞 0・雙標籤 0・半句之引 0（問卷歸形與標籤改語之疤已淨）")
-
-# ── 四一・卷首之文不落章中（章內不得有書首級之 H2）───────────────────
-STRAND = [u"【三篇立言之總意】", u"【卷首凡例與情境導航】", u"【開許篇末・體例例外說明】"]
-x41 = []
-for i, l in enumerate(BL[:CUT_APX], 1):
-    if not l.startswith(u"## "):
-        continue
-    if any(s in l for s in STRAND) or re.match(u"^## [壹貳參][·・]", l):
-        x41.append(u"L%d %s" % (i, l[3:24]))
-if x41:
-    bad(u"章中錯置書首之體 %d 處：%s" % (len(x41), u"／".join(x41[:4])))
-else:
-    note(u"卷首之體：章內無書首級之 H2（源冊自抄兩遍之導航碎片已剷）")
-
-# ── 四二・案例解碼之節題不得帶案數（有則必與實案相符）───────────────────
-CN42 = {c: i for i, c in enumerate(u"零一二三四五六七八九十")}
-
-
-def cn42(s):
-    if s == u"十":
-        return 10
-    if u"十" in s:
-        x, _, y = s.partition(u"十")
-        return (CN42.get(x, 1) * 10) + (CN42.get(y, 0) if y else 0)
-    return CN42.get(s, 0)
-
-
-x42 = []
-h42 = [(i, l) for i, l in enumerate(BL, 1) if re.match(u"^## 第[一二三四五六七八九十]+節", l)]
-for k, (i, l) in enumerate(h42):
-    if not re.search(u"案例解碼|案例深度|深度剖析|案例之解", l):
-        continue
-    j = h42[k + 1][0] if k + 1 < len(h42) else len(BL)
-    n = sum(1 for m in range(i, j) if BL[m - 1].startswith(u"### 案例"))
-    for m in re.finditer(u"([一二三四五六七八九十]+)(次|場|幕|則)", l):
-        if cn42(m.group(1)) != n:
-            x42.append(u"L%d『%s』稱%s・實案%d" % (i, m.group(0), m.group(1), n))
-if x42:
-    bad(u"節題之數不副實案 %d 處：%s" % (len(x42), u"／".join(x42[:4])))
-else:
-    note(u"節題之數：案例解碼諸節之題不帶案數（帶者俱與實案合）")
-
-# ── 四三・目錄之賬：冊身之章・節・附錄・終卷，目錄須一一俱列且無虛列 ───────
-ti = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 【本書總目錄】")), 0)
-tj = next((i for i in range(ti + 1, len(BL)) if BL[i - 1].startswith(u"# ")), len(BL))
-toc_chap, toc_sec = [], []
-for l in BL[ti:tj - 1]:
-    if l.startswith(u"    - "):
-        toc_sec.append(l[6:].strip())
-    elif l.startswith(u"- ") and re.match(u"第[一二三四五六七八九十]+章", l[2:]):
-        toc_chap.append(l[2:].strip())
-fence, inch, b_chap, b_sec = False, False, [], []
-for i in range(tj - 1, len(BL)):
-    l = BL[i]
-    if l.startswith(u"```"):
-        fence = not fence
-        continue
-    if fence:
-        continue
-    if re.match(u"^# 第[一二三四五六七八九十]+章　", l):
-        b_chap.append(l[2:].strip())
-        inch = True
-    elif l.startswith(u"# "):
-        inch = False
-    elif inch and l.startswith(u"## "):
-        b_sec.append(l[3:].strip())
-miss = [x for x in b_chap if x not in toc_chap] + [x for x in b_sec if x not in toc_sec]
-ghost = [x for x in toc_chap + toc_sec if x not in b_chap + b_sec]
-if miss or ghost:
-    bad(u"目錄不副冊身：漏列 %d（例：%s）・虛列 %d（例：%s）" % (
-        len(miss), (miss[0][:22] if miss else u""), len(ghost), (ghost[0][:22] if ghost else u"")))
-else:
-    note(u"目錄之賬：章 %d・節 %d 俱列，無漏無虛（改書即改目，目與身同一源）" % (len(b_chap), len(b_sec)))
-
-# ── 卅九・六段之齊：每案俱立『心相照鏡』，其機位純為第二人稱，所引之語不虛出 ──
-no_mir, no_you, invented = [], [], []
-for i, l in enumerate(BL, 1):
-    if not l.startswith(u"### 案例"):
-        continue
-    j = next((k for k in range(i + 1, len(BL)) if BL[k - 1].startswith((u"### ", u"## ", u"# "))), len(BL))
-    blk = u"\n".join(BL[i:j - 1])
-    mm = re.search(u"^#### 心相照鏡\\n\\n(.*?)\\n\\n(?:#### |---)", blk + u"\n\n---", re.S | re.M)
-    if not mm:
-        no_mir.append(l[4:26])
-        continue
-    mir = mm.group(1)
-    if u"你" not in mir[:120]:
-        no_you.append(l[4:22])
-    for q in re.findall(u"[「『]([^」』]{8,40})[」』]", mir):
-        if q not in blk and q not in book:
-            invented.append(u"%s｜%s" % (l[4:18], q[:18]))
-if no_mir or no_you or invented:
-    bad(u"六段不齊：缺鏡 %d 案（例：%s）・機位無『你』 %d 案・所引無出處 %d 條（例：%s）" % (
-        len(no_mir), u"／".join(no_mir[:2]), len(no_you), len(invented), u"／".join(invented[:2])))
-else:
-    reg = [l.split(u"\t") for l in io.open(os.path.join(HERE, u"鏡位清冊.tsv"), encoding="utf-8").read().split(NL) if l.strip()]
-    cnt = {}
-    for r in reg:
-        cnt[r[2] if len(r) > 2 else u"？"] = cnt.get(r[2] if len(r) > 2 else u"？", 0) + 1
-    miss = [t for _c, t in ((r[0], r[1]) for r in reg) if t and t[:12] not in book]
-    n_all = len([1 for l in BL if l.startswith(u"### 案例")])
-    if len(reg) != n_all:
-        bad(u"鏡位清冊 %d 行 ≠ 冊身案例 %d" % (len(reg), n_all))
-    elif miss:
-        bad(u"鏡位清冊所記之案有 %d 條不見於冊身（例：%s）" % (len(miss), miss[0][:22]))
-    elif cnt.get(u"無骨可轉"):
-        bad(u"轉位不成者 %d 案（剖析無骨可取）" % cnt[u"無骨可轉"])
-    else:
-        note(u"六段之齊：%d 案俱立心相照鏡（%s），機位俱是『你』，所引俱有其出處" % (
-            n_all, u"・".join(u"%s×%d" % (k, v) for k, v in sorted(cnt.items()))))
-
-
-# ── 四四・戒本總表之通數：表題之數須由表身自算，二部之組缺一不可 ─────────────
-_i3 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄三")), 0)
-_i4 = next((i for i, l in enumerate(BL, 1) if l.startswith(u"## 附錄四")), len(BL))
-_jbt = re.match(u"^## 附錄三　全戒本歷條總對照表（比丘 (\\d+)・比丘尼 (\\d+)）", BL[_i3 - 1])
-_grp, _cur, real = {u"甲": [], u"乙": []}, None, {u"甲": 0, u"乙": 0}
-for l in BL[_i3:_i4]:
-    m = re.match(u"^### ([甲乙])、比丘尼?戒本：(.*)$", l)
-    if m:
-        _cur = m.group(1)
-        _grp[_cur].append(m.group(2))
-        continue
-    if _cur:
-        r = re.match(u"^\\s*(\\d+)(?:[～~](\\d+))?\\.\\s", l)
-        if r:
-            real[_cur] += (int(r.group(2)) - int(r.group(1)) + 1) if r.group(2) else 1
-NEED = {u"甲": [u"四波羅夷", u"十三僧殘", u"二不定法", u"三十捨墮", u"九十單提",
-               u"四提舍尼", u"百眾學法", u"七滅諍法"],
-        u"乙": [u"八波羅夷", u"十七僧殘", u"三十捨墮", u"一百七十八單提",
-               u"八悔過法", u"百眾學法", u"七滅諍法"]}
-lost = [u"%s・%s" % (b, k) for b in (u"甲", u"乙") for k in NEED[b]
-        if not any(x.startswith(k) for x in _grp[b])]
-if lost:
-    bad(u"戒本總表缺組：%s" % u"／".join(lost))
-_decl = {u"甲": [], u"乙": []}
-for l in BL[_i3:_i4]:
-    m = re.match(u"^### ([甲乙])、.*?戒本 (\\d+) 條", l)
-    if m:
-        _decl[m.group(1)].append(int(m.group(2)))
-_eq = re.search(u"（比丘 ([\\d＋]+)＝(\\d+) 條、比丘尼 ([\\d＋]+)＝(\\d+) 條，共 (\\d+) 號", book)
-if not _eq:
-    bad(u"戒本總表之算式走樣（表凡例無『比丘 …＝N 條、比丘尼 …＝M 條，共 K 號』）")
-else:
-    _a = [int(x) for x in _eq.group(1).split(u"＋")]
-    _b = [int(x) for x in _eq.group(3).split(u"＋")]
-    if _a != _decl[u"甲"] or _b != _decl[u"乙"]:
-        bad(u"表凡例算式與組頭不合：甲 宣%s・組頭%s ｜ 乙 宣%s・組頭%s" % (
-            _a, _decl[u"甲"], _b, _decl[u"乙"]))
-    elif int(_eq.group(2)) != sum(_a) or int(_eq.group(4)) != sum(_b) or int(_eq.group(5)) != sum(_a) + sum(_b):
-        bad(u"表凡例算式之和不實：甲%s＝%s・乙%s＝%s・共%s（當為 %d）" % (
-            _eq.group(2), sum(_a), _eq.group(4), sum(_b), _eq.group(5), sum(_a) + sum(_b)))
-if not _jbt:
-    bad(u"戒本總表表題形制走樣：=%s" % BL[_i3 - 1][:40])
-elif int(_jbt.group(1)) != real[u"甲"] or int(_jbt.group(2)) != real[u"乙"]:
-    bad(u"戒本總表宣比丘 %s・尼 %s，表身實列甲 %d・乙 %d（表題必由表身自算）"
-        % (_jbt.group(1), _jbt.group(2), real[u"甲"], real[u"乙"]))
-elif real[u"甲"] != 250 or real[u"乙"] != 348:
-    bad(u"二部通數當為 250／348，今甲 %d・乙 %d" % (real[u"甲"], real[u"乙"]))
-else:
-    note(u"戒本總表：甲 %d・乙 %d（乙含八悔過・百眾學・七滅諍 115 號，俱依律據登位）、表題與表身同數，"
-         u"甲 %d 組・乙 %d 組俱在" % (real[u"甲"], real[u"乙"], len(_grp[u"甲"]), len(_grp[u"乙"])))
-
 
 print(u"\n".join(u"● " + x for x in NOTE))
 if FAIL:

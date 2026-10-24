@@ -338,55 +338,131 @@ def cw_units(s):
     return sum(2 if ord(c) > 0x2E80 else 1 for c in s)
 
 
+def pre_base_sizes():
+    """final html 內每個 <pre> 標籤之基準字級（inline style，無則 None）。
+    印面回量須以此為基準——PDF span 之最小字級不可用：段內既有 1.1em 之寬字（.pw）、
+    又有 0.55em 之缺字（.pf），取其小者必把基準誤認為 0.55 倍，縮字遂連環下墜至下限。"""
+    html = io.open(FINAL, encoding="utf-8").read()
+    out = []
+    for m in re.finditer(r"(?s)<pre\b[^>]*>", html):
+        s = re.search(r"font-size:\s*([\d.]+)pt", m.group(0))
+        out.append(float(s.group(1)) if s else None)
+    return out
+
+
+def pre_audit(doc, blocks, bases, mp, pages=None):
+    """印面圍欄總稽核（量產物，不套字型模型）：回 {段序: dict(基准・源行・印行・可用・實寬・對鎖)}。
+    逐段先定其所在頁（首尾同頁者一頁，跨頁者自首頁量至末頁，舊口徑唯量同頁者——遂令 67 行之
+    十六觀心圖印至 10pt 而末二行被換行鋸斷、歷輪無知，第 67 輪 p517 實測）；再取該段灰底框
+    （pre 之 border box）為上下左右之界，頁腳頁碼在框外故不汙行數；右界即框之右緣，故任何縮排
+    來源（blockquote／列表／邊框／奇偶頁）一律自動吸收。
+    實寬由「源檔行↔印面行」逐行對鎖而得：一行印成兩行（被 word-break 鋸斷）者，以其兩行寬之
+    和還原其應有之寬。此步要緊——舊唯量印面最長行，則斷點恰落框內者（如源 88 格、實需 512pt
+    而斷於 500pt 處）看似合框，實已散架，歷輪不報。
+    基準字級取 html 標籤之 inline style（pre_base_sizes）；PDF 內 span 混 1.1em 寬字與 0.55em
+    缺字，取其小者必把基準誤認為 0.55 倍，縮字遂連環下墜至 6.2pt 下限（第 67 輪之案）。
+    """
+    def nn(s):
+        return "".join(s.split())
+
+    if pages is None:
+        pages = [nn(doc[i].get_text()) for i in range(doc.page_count)]
+    out = {}
+    for k, b in enumerate(blocks, 1):
+        head, tail = nn(b[0])[:12], nn(b[-1])[:12]
+        ph = [i for i, t in enumerate(pages) if head in t]
+        pt = [i for i, t in enumerate(pages) if tail in t]
+        if not ph or not pt:
+            continue
+        both = sorted(set(ph) & set(pt))
+        if not both and max(pt) - min(ph) > 4:
+            continue
+        pgs = [both[0]] if both else list(range(min(ph), min(max(pt) + 1, min(ph) + 5)))
+        base = bases[mp[k]] if k in mp and mp[k] < len(bases) else None
+        if not base:
+            continue
+        rows2, avail = [], None
+        for p in pgs:
+            rows = []
+            for bl in doc[p].get_text("rawdict")["blocks"]:
+                for ln in bl.get("lines", []):
+                    txt = "".join(c["c"] for sp in ln.get("spans", []) for c in sp["chars"])
+                    if txt.strip():
+                        mx = max(sp.get("size", 0) for sp in ln.get("spans", []))
+                        rows.append((ln["bbox"][1], ln["bbox"][0], ln["bbox"][2], nn(txt), mx))
+            rows.sort()
+            # 唯取等寬之行：圍欄內之行其最大 span 為 base 或 1.1em（寬字），正文・頁腳俱大於此，
+            # 不滤則同頁之散體文字混入行數，對鎖遂亂（第 67 輪 p516 實測：段內混入章首六行正文）。
+            mono = [r for r in rows if r[4] <= 1.1 * base + 0.4]
+            if not mono:
+                continue
+            ys = [r[0] for r in mono if r[3].startswith(head)]
+            ye = [r[0] for r in mono if r[3].startswith(tail)]
+            y0 = ys[0] - 1 if (p == pgs[0] and ys) else -1
+            y1 = max(ye) + 2 if (p == pgs[-1] and ye) else 1e9
+            seg = [r for r in mono if y0 <= r[0] <= y1]
+            if not seg:
+                continue
+            # 灰底框取「含段首行而面積最大」之矩形，以其上下界裁之——不取諸矩形之交集，
+            # 交集會把只覆蓋數行的淺框當成界，一段 41 行遂只量得 1 行（第 67 輪 #76・84-87 之帳）。
+            cand = [g["rect"] for g in doc[p].get_drawings()
+                    if g.get("fill") and g["rect"].x0 <= seg[0][1] + 1
+                    and g["rect"].x1 > seg[0][1] + 100
+                    and g["rect"].y0 - 3 <= seg[0][0] <= g["rect"].y1 + 3]
+            if cand:
+                g = max(cand, key=lambda z: z.width * z.height)
+                seg = [r for r in seg if g.y0 - 4 <= r[0] <= g.y1 + 4]
+                right = g.x1
+            else:
+                right = doc[p].rect.width - 51.0
+            if not seg:
+                continue
+            x0 = min(r[1] for r in seg)
+            a = right - 0.55 * base - 2.0 - x0
+            avail = a if avail is None else min(avail, a)
+            rows2.extend((x0, r[2], r[3], p) for r in seg)
+        if not rows2 or not avail or avail <= 0:
+            continue
+        src = [nn(x) for x in b if nn(x)]
+        w_of, i, j, nmatch = [], 0, 0, 0
+        while i < len(src) and j < len(rows2):
+            w = rows2[j][1] - rows2[j][0]
+            if rows2[j][2] == src[i]:
+                w_of.append(w)
+                nmatch += 1
+                i, j = i + 1, j + 1
+            elif (j + 1 < len(rows2) and rows2[j + 1][3] == rows2[j][3]
+                  and (rows2[j][2] + rows2[j + 1][2]) == src[i]):
+                w_of.append(w + rows2[j + 1][1] - rows2[j][0])   # 鋸斷者：兩行寬之和還原
+                nmatch += 1
+                i, j = i + 1, j + 2
+            else:
+                j += 1                       # 框內雜行（頁碼・標注）：跳過再試
+        ink = max(r[1] - r[0] for r in rows2)
+        ok = nmatch >= max(2, int(0.6 * len(src)))
+        out[k] = dict(base=base, src=len(src), rows=len(rows2), avail=avail,
+                      widest=(max(w_of) if w_of else ink) if ok else ink,
+                      nmatch=nmatch, sync=ok, ink=ink, pgs=len(pgs), first=b[0].strip()[:20])
+    return out
+
+
 def pre_overflows(pdf, blocks):
-    """以印面實測回量每段圍欄：所在頁、內容左界、窄字字級、最長格數。
-    須縮者回傳 {段序: 新字級}。不再猜容器內距——左界與字級俱由冊中量出，
-    故 blockquote／列表／邊框之類任何縮排來源一律自動吸收。
+    """須縮者回傳 {段序: 新字級}（縮幅＝可用寬 ÷ 實測應有之寬）。
+    縮時留 1% 之裕；變化不足 0.3pt 者不報——免每一趟因捨入再縮 1% 而八趟不斂（第 67 輪螢幕版之帳）。
     """
     import pymupdf
 
     d = pymupdf.open(pdf)
-
-    def nn(s):
-        return "".join(s.split())
-
-    pages = [nn(d[i].get_text()) for i in range(d.page_count)]
+    mp, _n, _miss = pre_tag_map(blocks)
+    bases = pre_base_sizes()
     need = {}
-    for k, b in enumerate(blocks, 1):
-        head, tail = nn(b[0])[:12], nn(b[-1])[:12]
-        at = next((i for i, t in enumerate(pages) if head in t and tail in t), None)
-        if at is None:
-            continue
-        rows = []
-        for bl in d[at].get_text("rawdict")["blocks"]:
-            for ln in bl.get("lines", []):
-                txt = "".join(c["c"] for sp in ln.get("spans", []) for c in sp["chars"])
-                if not txt.strip():
-                    continue
-                sz = min(sp.get("size", 99.0) for sp in ln.get("spans", []))
-                rows.append((ln["bbox"][1], ln["bbox"][0], ln["bbox"][2], sz, nn(txt)))
-        ys = [r[0] for r in rows if r[4].startswith(head)]
-        ye = [r[0] for r in rows if r[4].startswith(tail)]
-        if not ys or not ye:
-            continue
-        seg = [r for r in rows if ys[0] - 1 <= r[0] <= max(ye) + 2]
-        x0 = min(r[1] for r in seg)
-        # 取段內最小字級＝窄字（Consolas）之級；寬字 span 為 1.1 倍，若誤取大者必永不收斂。
-        size = min(r[3] for r in seg)
-        wmax = max(cw_units(x) for x in b)
-        # 右界不採假設之頁邊距——本冊鏡像排版（外 10mm／內 18mm），奇偶頁可用寬不同。
-        # 逕取該段圍欄之灰底框（pre 之 border box）右緣，內距與框線一併扣掉。
-        box = [g["rect"] for g in d[at].get_drawings()
-               if g.get("fill") and seg[0][0] - 2 <= g["rect"].y0 <= max(ye) + 2
-               and g["rect"].x0 <= x0 + 1 and g["rect"].x1 > x0 + 100]
-        right = min((r.x1 for r in box), default=d[at].rect.width - 51.0)
-        avail = right - 0.55 * size - 1.2 - x0
-        wrapped = len(seg) > len(b) + 1        # 印面行數多於源檔行數＝圖已被換行鋸斷
-        if 0.55 * wmax * size > avail + 0.5 or wrapped:
-            fit = avail / (0.55 * wmax + 1.1)
-            if wrapped:                        # 已換行者再折一刀，免卡在邊界上原地打轉
-                fit = min(fit, size * (len(b) + 0.5) / len(seg))
-            need[k] = round(max(6.2, fit), 2)
+    for k, r in pre_audit(d, blocks, bases, mp).items():
+        ratio = r["avail"] / r["widest"] if r["widest"] > r["avail"] else 1.0
+        if not r["sync"] and r["rows"] > r["src"] + r["pgs"]:   # 對鎖失靈而行數仍超＝有行被鋸
+            ratio = min(ratio, (r["src"] + r["pgs"] + 0.5) / r["rows"])
+        target = r["base"] * ratio * 0.99
+        if target < r["base"] - 0.3:
+            need[k] = round(max(6.2, target), 2)
     d.close()
     return need
 

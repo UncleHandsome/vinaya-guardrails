@@ -12,7 +12,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 BOOK = HP.SRC
 GO = u"--go" in sys.argv
-PAGES = 292                       # 末次重建（2026-10-17）288 頁；重建後須隨動，或給 --pages=N
+PAGES = 288                       # 末次重建（2026-10-19）288 頁；重建後須隨動，或給 --pages=N
 for a in sys.argv:
     if a.startswith('--pages='): PAGES = int(a[8:])
 NL = chr(13) + chr(10)

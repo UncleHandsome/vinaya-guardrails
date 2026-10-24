@@ -28,6 +28,7 @@ if LAYOUT not in ("print", "screen"):
 SCREEN = (LAYOUT == "screen")
 TBLW = os.environ.get("TBLW", "content").lower()
 TBLW_POW = float(os.environ.get("TBLW_POW", "0.5"))
+CLEAN = any(a in ("clean", u"出淨", u"淨本") for a in _ARGS)     # 出淨本：卸案語與工程自述，正本一字不動
 # 瀏覽器之虛擬時鐘與合成器旗標俱已撤除（第八十九輪交錯量測：同一 293 頁樣本，
 # 現行旗標三遍取最小 44.8s，撤此二旗標 42.7s，省約 5%，而產物之位元組數、頁數、
 # 文字長度三者全同）。近空白頁之啟動底數 2.9s，故 94% 之耗時在排版與落盤本身，
@@ -36,6 +37,7 @@ TBLW_POW = float(os.environ.get("TBLW_POW", "0.5"))
 # 目錄頁碼之暖起點：以 `TOCSEED=0` 可廢。詳見 main 之說明。
 TOCSEED = os.environ.get("TOCSEED", "1") != "0"
 SUFFIX = "" if MODE == "full" else "_精簡本"
+SUFFIX += "_出淨" if CLEAN else ""
 TAG = "" if not SCREEN else "_screen"
 STEM = ("ver38四分律_起心動念心智分析框架_第三十八版_列印版" + SUFFIX
         if not SCREEN else
@@ -54,7 +56,7 @@ CSS_FILE = "print38.css"
 
 # 精簡本僅收 A、B；K 款級台帳自第 79 輪起並連定本亦不隨冊（編者自查之表，退工作檔）
 SLIM_KEEP = {"A", "B"}   # 精簡本不附款級台帳（內部查核表，讀者無用）
-EDITION = ("第三十八版" + ("（通讀精簡本）" if MODE == "slim" else "（定本）")
+EDITION = ("第三十八版" + ("（通讀精簡本）" if MODE == "slim" else "（出淨本）" if CLEAN else "（定本）")
            + ("·螢幕版" if SCREEN else ""))
 APPS = "附錄 A、B　二篇隨冊" if MODE == "slim" else "附錄 A、B、D–F、H–J　八篇隨冊"
 
@@ -484,6 +486,55 @@ def build_toc_html(entries, pages):
         rows.append(toc_line(lvl, disp, pages.get(key)))
     rows.append("</div>")
     return rows
+
+
+# ---- 出淨本之清創規則（CLEAN 模式专用：只動產物層，正本一字不動）------------------
+# 取捨：削『案語・版次自述・詞頻清單・校勘口徑段』四類；**留**台帳表格（檢索工具，且為
+#       書內指針之靶）與附錄 F-3（削之則『已列附錄F-3』諸指針成懸指）。
+CLEAN_SPANS = [
+    (u"案語〔案：〕", re.compile(u"〔案：[^〕\n]*〕")),
+    (u"案語〔編者按〕", re.compile(u"〔編者按：[^〕\n]*〕")),
+    (u"版次『於第N版…時』", re.compile(u"[，、]?於第[一二三四五六七八九十百]{1,4}版[^，。；\n]{0,14}時")),
+    (u"版次『依第N版』", re.compile(u"依第[一二三四五六七八九十百]{1,4}版")),
+]
+CLEAN_DROPS = [
+    (u"詞頻括註", re.compile(u"^（?諸數皆字頻|（諸數皆字頻[^）]*）")),
+    (u"校勘口徑段", re.compile(r"^\s*\*\s\*\*〔口徑定義|^\s*\*\s\*\*統計口徑之檢索式")),
+    (u"詞頻清單", re.compile(r"出現次數為|一語出現 9\d 次|出現 9\d 次之多")),
+    (u"升格梯隊條", re.compile(r"^\s*\*\s\*\*第[一二三]梯隊")),
+    (u"附錄升格自述", re.compile(r"^>?\s*本書於第[三四五六七八九十]{1,3}版")),
+]
+
+
+def apply_clean_cuts(lines):
+    """出淨本：先削行內案語與版次自述之 span，再削整行的詞頻清單與校勘口徑段。
+    凡削後只餘 markdown 骨架（空行、`>`、`-`、`*`、序號）之行一併除之；逐則報命中數。"""
+    tally = {}
+    for name, _rx in CLEAN_SPANS + CLEAN_DROPS:
+        tally[name] = 0
+    out = []
+    for l in lines:
+        s = l
+        for name, rx in CLEAN_SPANS:
+            s2, n = rx.subn(u"", s)
+            if n:
+                tally[name] += n
+                s = s2
+        if not s.strip() and l.strip():
+            tally[u"（骨架行隨削而除）"] = tally.get(u"（骨架行隨削而除）", 0) + 1
+            continue
+        drop = False
+        for name, rx in CLEAN_DROPS:
+            if rx.search(s):
+                tally[name] += 1
+                drop = True
+                break
+        if drop:
+            continue
+        out.append(s)
+    print(u"出淨本清創：" + u"｜".join(u"%s %d" % (k, v) for k, v in tally.items() if v))
+    print(u"  行 %d → %d（削 %d 行）" % (len(lines), len(out), len(lines) - len(out)))
+    return out
 
 
 def write_md(lines, hs, pages):
@@ -1426,6 +1477,8 @@ def main():
     lines = strip_ch6_yuandian(lines, collect_all_headings(lines))
     lines = apply_slim_markers(lines)
     lines = apply_slim_cuts(lines, collect_all_headings(lines))
+    if CLEAN:
+        lines = apply_clean_cuts(lines)
     lines = ensure_blank(lines)
     hs = collect_headings(lines)
     entries = prepare_toc_entries(hs)

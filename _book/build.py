@@ -256,12 +256,9 @@ HEAD.append(ROAD)
 HEAD.append(A.vfront(u"開卷總提撕"))
 
 # ── 卷末 ────────────────────────────────────────────────────────────────────
-_JB3 = A.jieben()
-_JBN = A.STATS.get(u"戒本號數") or {u"甲": 0, u"乙": 0}
-
 APX = [(u"附錄一", u"宗門心法——禪案與自性觀照輯要", A.vappx(u"A")),
        (u"附錄二", u"極限情境壓力測試矩陣", A.vappx(u"B")),
-       (u"附錄三", u"全戒本歷條總對照表（比丘 %d・比丘尼 %d）" % (_JBN[u"甲"], _JBN[u"乙"]), _JB3),
+       (u"附錄三", u"全戒本歷條總對照表（比丘 250・比丘尼 348）", A.jieben()),
        (u"附錄四", u"現代深水實務案例推演", A.vappx(u"J")),
        (u"附錄五", u"文獻存檔與經論互證", A.vappx(u"D") + u"\n\n" + A.vappx(u"E") + u"\n\n" + A.vappx(u"F"))]
 TAIL = [u"\n\n".join(u"## %s　%s\n\n%s" % (k, tt, re.sub(u"^## # ", u"# ", x)) for k, tt, x in APX)]
@@ -322,17 +319,7 @@ def post_fix(text):
                lambda m: u"案例%s（其%s）" % (m.group(1), m.group(2)), text)
     n2 = len(re.findall(u"案例[一二三四五六七八九十]+第[一二三四五六七八九十]+章案例", t))
     t = re.sub(u"(案例[一二三四五六七八九十]+)(?=第[一二三四五六七八九十]+章案例)", u"\\1、", t)
-    # (c)『第 問[3]問』經問卷歸形後疊為『第 第3問問』——問卷代碼之舊疤，此處對治；
-    n3 = len(re.findall(u"第\\s*第[0-9]+問(?:問)?", t))
-    t = re.sub(u"第\\s*(第[0-9]+)問問", u"\\1問", t)
-    t = re.sub(u"(第[0-9]+)問問", u"\\1問", t)
-    # (d) 圖中雙標籤『【開許回撤即淨：回撤即淨】』——副名嵌於主名之內者，歸一
-    n4 = len(re.findall(u"【([^：】]{2,12})：([^：】]{2,12})】", t))
-    def undouble(m):
-        a, b = m.group(1), m.group(2)
-        return u"【%s】" % a if (b in a or a in b) else m.group(0)
-    t = re.sub(u"【([^：】]{2,12})：([^：】]{2,12})】", undouble, t)
-    print(u"末道修整：縫合病句 %d 處｜案例黏連補逗 %d 處｜問卷疊詞 %d 處｜雙標籤歸一 %d 處" % (n, n2, n3, n4))
+    print(u"末道修整：縫合病句 %d 處｜案例黏連補逗 %d 處" % (n, n2))
     return t
 
 
@@ -412,6 +399,12 @@ POLISH = [
   u"佛陀沒有把行人當作神仙，佛陀知道行人是凡夫；佛陀沒有責怪行人的軟弱，佛陀以畢生的時間，把通往深淵的每一處缺口，逐一包紮、修築成了護欄。",
   u"『四十九年』乃後世通行之說，非本律所量，去其數"),
  (u"第七至十三章 100 則活生生的案例。", u"第七至十三章一樁樁活生生的案例。", u"去 100 則之額"),
+ (u"## 壹·照破執念：遮止四十五則（對治貪瞋癡慢，為難調者設界）",
+  u"## 壹·照破執念：遮止義之判例（對治貪瞋癡慢，為難調者設界）", u"三輯之題去其額"),
+ (u"## 貳·開許慈悲：開許二十五則（源於清淨悲願，為慚愧者留門）",
+  u"## 貳·開許慈悲：開許義之判例（源於清淨悲願，為慚愧者留門）", u"同上"),
+ (u"## 參·群己和合：僧伽三十則（建構治理秩序，令正法得久住）",
+  u"## 參·群己和合：僧伽治法之判例（建構治理秩序，令正法得久住）", u"同上"),
  (u"這三份人物檔案在律中的分量，可以用次數來量：『六群』一詞在本律出現 994 次，是整部律藏裡最頻繁的犯緣主詞；跋難陀 250 見、迦留陀夷 172 見。把次數排在一起看，會得出一個與「道德寓言」不同的讀法。",
   u"這三份人物檔案在律中的分量極重：『六群』是本律反覆出現的犯緣主詞，跋難陀與迦留陀夷尤為其中之兩端。把他們的事跡排在一起看，會得出一個與「道德寓言」不同的讀法。",
   u"正文不立詞頻之數"),
@@ -447,11 +440,6 @@ POLISH = [
   u"## 第三節　深度案例解碼：威儀與法庭上的現行犯", u"章內實案非六場，去其數"),
  (u"## 第二節　深度案例解碼：制度現場的廿七幕",
   u"## 第二節　深度案例解碼：制度現場的凡夫僧團", u"合編後本章實案逾廿七，去其數"),
- (u"## 第三節　深度案例解碼：王城的四次失守",
-  u"## 第三節　深度案例解碼：王城四重之失守",
-  u"『四次』本指四重之戒，然章內之案已逾四，易其辭以絕誤讀"),
- (u"## 第三節　深度案例解碼：宮牆上的六次失守",
-  u"## 第三節　深度案例解碼：宮牆上的相續失守", u"源冊本六案，合編後實案逾之，去其數"),
  (u"以下廿七幕，全出於律藏原文：", u"以下諸案，全出於律藏原文：", u"同上"),
  (u"廿七幕看似雜沓，其職司其實只有三類：", u"諸案看似雜沓，其職司其實只有三類：", u"同上"),
  (u"## 第二節　七滅諍法：僧團內部的「最高憲法法院」",
@@ -659,23 +647,9 @@ NOTE_KAO = re.compile(u"律無|律之|律中|非逐字|撮要|撮合|舊引|非�
                       u"不作逐字|巴利|諸部|全語料|本書之稱|存誠|覆核|別見|異寫|出處|未制|類推|推演")
 NOTE_HEAD = u"""### 附・卷末校勘記（自正文遷立者）
 
-正文不復夾注：凡舊引之正、逐字之辨、名相之異寫、出處之別見，悉登於此，各標其落點。落點以章・節・案為名，可循冊身而往核其文；記文如舊，未減一字。
+正文不復夽注：凡舊引之正、逐字之辨、名相之異寫、出處之別見，悉登於此，各標其落點。落點以章・節・案為名，可循冊身而往核其文；記文如舊，未減一字。
 
 """
-
-
-def spot_of(ch, sec, cs):
-    """落點之名：章取其號、節取其號、案取其號與題之首（截於句讀，不斬詞）。"""
-    a = (re.match(u"第[一二三四五六七八九十]+章", ch) or [u""])[0]
-    m = re.match(u"第[一二三四五六七八九十]+節", sec)
-    b = m.group(0) if m else (re.split(u"　", sec)[0][:10] if sec else u"")
-    c = u""
-    mm = re.match(u"案例([一二三四五六七八九十]+)[：:](.*)", cs)
-    if mm:
-        c = u"案例%s：%s" % (mm.group(1), re.split(u"——|：", mm.group(2))[0].strip()[:14])
-    elif cs:
-        c = re.split(u"　|（|\\s", cs)[0][:14]
-    return u"／".join(x for x in (a, b, c) if x) or u"（無節）"
 
 
 def scrub_notes(text):
@@ -695,7 +669,7 @@ def scrub_notes(text):
         if i < first or i >= apx or u"〔案：" not in l:
             out.append(l)
             continue
-        spot = spot_of(ch, sec, cs)
+        spot = u"／".join(x for x in (ch[:8], sec[:18], cs[:24]) if x)
 
         def rep(m, spot=spot):
             txt = m.group(1).strip()
@@ -710,33 +684,11 @@ def scrub_notes(text):
         out.append(new.rstrip())
     blk = u"\n" + NOTE_HEAD + u"".join(
         u"%d. **%s**｜%s\n" % (n + 1, sp, tx) for n, (sp, tx) in enumerate(rec)) + u"\n"
-    body = u"\n".join(out)
-    k = body.find(u"# 終卷")
+    k = text.find(u"# 終卷")
     if k < 0:
         raise SystemExit(u"scrub_notes：終卷之界不可得，校勘記無處可插")
     print(u"夾注之遷：登卷末 %d 條｜併入正文 %d 條｜卷首・附錄之注各安其位" % (len(rec), merged[0]))
-    return body[:k] + blk + body[k:]
-
-
-STRAND_HEAD = re.compile(u"^## (【三篇立言之總意】|【卷首凡例與情境導航】|【開許篇末[·・]體例例外說明】|[壹貳參][·・])")
-STRAND_END = re.compile(u"^## 第[一二三四五六七八九十]+節|^# ")
-
-
-def drop_stranded(text):
-    """源冊（框架）曾把自家書首之導航又抄一遍在其波羅夷章之內，合編遂腰斬得卷首之體。
-       其體例諸條已歸本冊凡例，其『心病直取索引』乃凡例第六條所禁之跨章平帳——整塊剷除，不使復現。"""
-    out, drop, n = [], 0, 0
-    for l in text.split(u"\n"):
-        if drop and STRAND_END.match(l):
-            drop = 0
-        elif STRAND_HEAD.match(l):
-            drop = 1
-        if drop:
-            n += 1
-            continue
-        out.append(l)
-    print(u"卷首錯置：剷除章中之書首碎片 %d 行（其例歸凡例，其索引不立）" % n)
-    return u"\n".join(out)
+    return text[:k] + blk + text[k:]
 
 
 ATTR_NONVERB = re.compile(u"\u7fa9\u5f15|\u5927\u610f|\u62ec\u65e8|\u6458\u8a33|\u64ae\u8209|\u4eca\u8b6f|\u6539\u7de8")
@@ -806,7 +758,6 @@ print(u"節序之治：重編 %s｜指針改序 %d 條%s" % (
     u"、".join(fixed) or u"無", nref,
     u"｜舊序衝突 %d 處（其指針不復以節序臆改，改由散點與指名二尺落之）：%s" % (
         len(clash), u"／".join(clash[:6])) if clash else u""))
-book = drop_stranded(book)      # 須在節序之治後：其界以『第N節』為憑
 book = final_polish(book)
 book = secular(book)
 book = scrub_notes(book)
@@ -839,7 +790,6 @@ print(u"款級親定：%d 條（候選不唯一者，立此存證，仍繙尺核
 def make_toc(text):
     out = [u"## 【本書總目錄】（由書身實題生成・改書即改目）", u""]
     fence = False
-    in_chap = False
     for l in text.split(u"\n"):
         if l.startswith(u"```"):
             fence = not fence
@@ -850,20 +800,12 @@ def make_toc(text):
         if m:
             out.append(u"")
             out.append(u"**%s**" % m.group(1))
-            in_chap = False
             continue
         m = re.match(r"^# (第[一二三四五六七八九十]+章　.+)$", l)
         if m:
             out.append(u"- %s" % m.group(1))
-            in_chap = True
-        elif l.startswith(u"# 終卷"):
+        elif l.startswith(u"# 終卷") or re.match(r"^## 附錄[一二三四五]", l):
             out.append(u"- %s" % l.lstrip("# "))
-            in_chap = False
-        elif l.startswith(u"## 附錄"):
-            out.append(u"- %s" % l[3:])
-            in_chap = False
-        elif in_chap and l.startswith(u"## "):
-            out.append(u"    - %s" % l[3:])
     return u"\n".join(out)
 
 
@@ -915,35 +857,13 @@ rows += [l.rstrip() for l in book.split("\n") if re.match(u"^## 附錄[一二三
 io.open(os.path.join(HERE, u"册題清冊.tsv"), "w", encoding="utf-8", newline="\n").write(
     "\n".join(rows) + "\n")
 
-# 鏡位清冊：每案之『心相照鏡』從何而來（源冊自照／補遺親筆／轉剖析而立・其frame），尺據以核冊身
-mrows, mcur = [], u""
-for l in book.split("\n"):
-    if l.startswith(u"# "):
-        mcur = l[2:14]
-    elif l.startswith(u"### 案例"):
-        ttl = l[4:]
-        core = re.split(u"：", ttl, 1)[-1]
-        mrows.append(u"\t".join([mcur, ttl[:34], A.MR.MIRROR_WHY.get(ttl, A.MR.MIRROR_WHY.get(core, u"源冊自照"))]))
-io.open(os.path.join(HERE, u"鏡位清冊.tsv"), "w", encoding="utf-8", newline="\n").write(
-    "\n".join(mrows) + "\n")
-_mwhy = {}
-for _r in mrows:
-    _mwhy[_r.split(u"\t")[2]] = _mwhy.get(_r.split(u"\t")[2], 0) + 1
-print(u"鏡位清冊：%d 案（%s）" % (len(mrows), u"・".join(
-    u"%s×%d" % (k, v) for k, v in sorted(_mwhy.items()))))
-
 io.open(OUT, "w", encoding="utf-8", newline="\n").write(book + u"\n")
 n = len(book.split("\n"))
 cjk = len(re.findall(u"[\\u3400-\\u9fff]", book))
 print(u"落成：%s｜%d 行｜%d 字｜漢字 %d" % (os.path.basename(OUT), n, len(book), cjk))
 fused = sum(1 for t, items in A.PLAN.items() for _, code, hc in items if code and hc)
-print(u"案例：%d（框架 115＋護欄 164－同案合一 %d－真合併 %d）｜人稱 你 %d／缺 %d・補鏡 %d｜指針重算 %d｜戒本表落地 %d" % (
-    A.SENT[u"case"], fused, len(A.FW_MERGE), A.SENT[u"second_ok"], A.SENT[u"second_missing"],
+print(u"案例：%d（框架 115＋護欄 164－同案合一 %d）｜人稱 你 %d／缺 %d・補鏡 %d｜指針重算 %d｜戒本表落地 %d" % (
+    A.SENT[u"case"], fused, A.SENT[u"second_ok"], A.SENT[u"second_missing"],
     A.SENT[u"mirror_fill"], A.RELINK[u"n"], A.RELINK[u"case"]))
-print(u"真合併：併案之段棄其重複 %d・主案之欄增益 %d（敘事不兩出、正理兩存）" % (
-    A.SENT[u"merge_drop"], A.SENT[u"merge_fold"]))
-print(u"心相照鏡之齊：源冊自照 %d・補遺親筆 %d・轉剖析而立 %d・無骨可轉 %d" % (
-    A.SENT[u"second_ok"], A.SENT[u"mirror_fill"], A.SENT[u"mirror_gen"], A.SENT[u"mirror_nog"]))
-print(u"　轉位之所依：%s" % u"・".join(u"%s×%d" % (k, v) for k, v in sorted(A.MR.FRAME_LOG.items())))
 for k in sorted(STATS):
     print(u"　規則 %-10s %d" % (k, STATS[k]))

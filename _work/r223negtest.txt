@@ -1,8 +1,8 @@
 ⚠ TKSRC=_work/_r223neg.md（副本之測）——自癒之器（battery／ledger）整批略過，寫檔旗標俱去
-_tk check     rc=1 BAD｜PASS 91｜FAIL 1
+_tk check     rc=1 BAD｜PASS 94｜FAIL 1
 verify_audit  rc=0 ok｜PASS 正名五處（標題/總表）逐字一致                    | ch6標題↔ch7正名差異 0 筆
-syncchk       rc=1 BAD｜結果：印面有動未入冊——候建（正向 72／反向 68）
-recordsimp    rc=0 ok｜合計 0 處（僅報；改須加 apply）
-memsimp       rc=0 ok｜合計 0 處（僅報）
+syncchk       rc=1 BAD｜結果：印面有動未入冊——候建（正向 2／反向 2）
+recordsimp    rc=0 ok｜合計 9 處（僅報；改須加 apply）
+memsimp       rc=0 ok｜合計 11 處（僅報）
 recglue       rc=0 ok｜結果：條列檔無重複黏貼（條列檔合計 0）
 結帳：非零者——_tk check、syncchk
