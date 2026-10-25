@@ -156,8 +156,8 @@ def p1():
 @plant(2)
 def p2():
     L = list(BASE)
-    i = find_line(lambda l, idx: l.startswith(u'### 〔補遺 44〕'))
-    return L, repl(L, i, u'44〕', u'45〕'), u'補遺 44→45（越序）'
+    i = find_line(lambda l, idx: l.startswith(u'### 〔調部深描 15〕'))
+    return L, repl(L, i, u'15〕', u'16〕'), u'深描 15→16（越序）'
 
 
 @plant(3)
@@ -180,8 +180,8 @@ def p4():
 def p5():
     L = list(BASE)
     i = prose()
-    L[i] += u'〔補遺45〕'
-    return L, i, u'加無卡之號指針〔補遺45〕'
+    L[i] += u'〔調部深描16〕'
+    return L, i, u'加無號之指針〔調部深描16〕'
 
 
 @plant(6)
@@ -295,8 +295,8 @@ def p18():
 @plant(19)
 def p19():
     L = list(BASE)
-    i = find_line(lambda l, idx: l.startswith(u'### 〔補遺 40〕'))
-    return L, repl(L, i, u'### ', u'#### '), u'降一則補遺為四級題（篇內少一則）'
+    i = find_line(lambda l, idx: l.startswith(u'### 〔調部深描 11〕'))
+    return L, repl(L, i, u'### ', u'#### '), u'降一則深描為四級題（篇內少一則）'
 
 
 @plant(20)
@@ -443,9 +443,19 @@ def p32c():
     return L, i, u'\u690d\u4e00\u6bb5\u4e94\u5341\u8a00\u7121\u6a1e\u9ede\u4e4b\u9010\u5b57\u5f15\u6587'
 
 
-PLANTS[36] = p32
+PLANTS[37] = p32
 PLANTS[24] = p24
-EXTRA = {36: [(u'32b', p32b)], 22: [(u'22b', p22b)]}
+EXTRA = {37: [(u'32b', p32b)], 22: [(u'22b', p22b)]}
+
+
+@plant(36)
+def p36h1():
+    """285・章級之植：把結語之 H1 改回分上下之形（一 H1 多題・章級分題之殘跡）。
+       （章級條數未動・目錄條目不含結語，故唯第 36 目當紅——針尖單軸。）"""
+    L = list(BASE)
+    i = find_line(lambda l, idx: l.startswith(u'# 結語'))
+    L[i] = L[i] + u'（上）'
+    return L, i, u'H1 著（上）之分題形（285 新目之植）'
 
 
 @plant(34)

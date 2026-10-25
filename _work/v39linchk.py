@@ -33,7 +33,7 @@ for fn, raw, nt, nm in v39align.CORPUS:
 assert len(LINES_TXT) == 6, u'語料六檔未齊'
 
 L = _tk.MAIN_LINES
-CARD = re.compile(u'^### 〔(案例|補遺) (\\d+)〕')
+CARD = re.compile(u'^### 〔(案例|調部深描) (\\d+)〕')
 LIN = re.compile(r'L(\d+)')
 VOLS = re.compile(u'卷\\s*([一二三四五六七八九十0-9]{1,4})')
 RNG2 = re.compile(u'卷段\\s*(\\d+)\\s*-\\s*(\\d+)')

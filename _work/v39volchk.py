@@ -26,7 +26,7 @@ import v39align                                                # noqa: E402
 verbose = u'-v' in sys.argv
 listing = u'-l' in sys.argv          # 278・列管轄清冊（宣稱之數亦是宣稱：殭尺之綠須現形）
 HEAD = re.compile(u'^#### 【律典原典】\\s*$')
-CARD = re.compile(u'^### 〔(案例|補遺) (\\d+)〕')
+CARD = re.compile(u'^### 〔(案例|調部深描) (\\d+)〕')
 STOP = re.compile(u'^(#{1,6} |---\\s*$)')
 Q = re.compile(u'\u300c([^\\u300c\\u300d]+)\\u300d')
 VOL = re.compile(u'卷\\s*\\[?([0-9]+|[一二三四五六七八九十]{1,4})\\]?')
