@@ -3,7 +3,7 @@
 
 【ver39 之異於 ver38 者（升版當輪記）】
   一、附錄已改名并收為六篇（附錄一～附錄六，『十五則深描』分上・下兩篇 H1），
-      編纂底冊四篇與終卷呈辭之去留一仍舊制（終卷不印）。
+      編纂底冊四篇仍不入主檔；『終卷』自第 286 輪奉令隨冊印（前制不印，致全章缺於冊）。
   二、正文八章（原第九章升格為第八章），第七章與第八章各分（上）（下）兩 H1。
   三、精簡本之削塊名單係對 ver38 字面而設，ver39 未立新制——run slim 即擲回，
       不產『半削之冊』（第 142 輪『寧可使建置失敗』之制今改為明閘）。
@@ -120,12 +120,13 @@ SLIM_NOTE = (
     "正文凡稱「見附錄 C／D／E／F／H／I／J／K」者，均指該等存檔。"
 )
 
-# 列印版不錄：上篇前置宣告與「終卷」之竣工呈辭（H1 以關鍵語內含比對）。
+# 列印版不錄：上篇前置宣告。『終卷』自第 286 輪奉令**隨冊印**（外路第十四報告指其全章未出），
+#   故 DROP_H1 今空——此器與其反檢仍留，唯不再擲任何 H1。
 # 編纂底冊四篇（附錄C 修訂誌・K 款級台帳・L 十維驗收・M 全書校勘記）自第 250 輪起另存
 #   `_archive/編纂底冊.md`，已不入主檔——故不在此列，改由下方 `BOTTOM_KEYS` 反向守之：
 #   主檔若再見此四題，即有人把底冊貼回書檔（讀者又看得見了），全建擲回。
 # 卷首標準目錄段不在此列——它由 write_md 就地換成點線目錄。
-DROP_H1 = ("全書竣工呈辭",)
+DROP_H1 = ()
 BOTTOM_KEYS = ("修訂誌", "跨章款級索引", "十維驗收", "全書校勘記")
 TOC_H2 = "【全書開卷標準目錄"        # 卷首標準目錄段首（H2 標題前綴）
 
@@ -576,10 +577,15 @@ def write_md(lines, hs, pages):
                   if re.match(r"^#{1,2}\s", lines[i])), len(lines))
         body = lines[:s] + ["<!--TOC-PLACEHOLDER-->", "",
                             BODY_ANCHOR, ""] + lines[e:]
-    # 為「開卷總提撕」掛 id，供 CSS 重置正文頁碼（封面不編碼、目錄用羅馬數字）
-    body = [l.replace("## 【開卷總提撕】",
-                       '<h2 id="opening-note">【開卷總提撕】</h2>', 1)
-            if l.startswith("## 【開卷總提撕】") else l for l in body]
+    # 為卷首第一個 H2 掛 id，供 CSS 具名頁 `toc` 起羅馬頁碼（封面不編碼）。
+    # 286 之改：錨自『開卷總提撕』前移至真正之第一頁卷首『【自序…】』——舊制自序一頁落在 .fm
+    #   之外，遂印成阿拉伯「2」而次頁作「iii」，一卷首內兩制相交（外路第十四報告逮之）。
+    def _anchor_fm(l):
+        for pre in (u"## 【自序", u"## 【開卷總提撕】"):
+            if l.startswith(pre):
+                return u'<h2 id="opening-note">%s</h2>' % l[3:].strip()
+        return l
+    body = [_anchor_fm(l) for l in body]
     if MODE == "slim":
         k = next((i for i, l in enumerate(body) if l.startswith("## 【卷首導讀")), 1)
         body = body[:k] + [SLIM_NOTE, ""] + body[k:]
@@ -639,10 +645,11 @@ def retune_tables(html, mode="content", power=0.5):
         ws = [x / tot * 100.0 for x in w]
         # 標籤欄之可讀下限（第 164 輪據產物層改）：舊唯設全表下限 6%，而 CAP=104、PAD=2.4
         # 之下 6% 每行僅折 1.9 個漢字——『領域軸＼心智軸』『新編號』一類標籤欄遂一字一行。
-        # 今令每行至少容該欄最長『短格』（≤24 半形單位，即標籤類之格）之半，且不少於四個漢字。
+        # 今令每行至少容該欄最長『短格』（≤30 半形單位，標籤與卷次類之格；286 自 24 放寬，
+        # 因『卷四十八・初分』一類 25〜30 單位之格舊不入眼，出處欄遂一字一行）之半，且不少於四個漢字。
         fl = []
         for i in range(n):
-            labs = [u[i] for u in units if 0 < u[i] <= 24]
+            labs = [u[i] for u in units if 0 < u[i] <= 30]
             wide = 8.0 if not labs else max(8.0, min(max(labs) / 2.0, 12.0))
             fl.append(max(lo, (wide + PAD) / CAP * 100.0))
         if sum(fl) > 92.0:                       # 欄多而下限總和過高時按比例退讓，唯不破全表下限
@@ -919,6 +926,23 @@ def table_keep(html, max_rows=9, max_chars=1500):
 
 
 
+def label_table_keep(html):
+    r"""表前之短標籤行歸入表體為 <caption>（第 286 輪・外路第十四報告 p55 表題孤留）。
+
+    先試之途為鎖框（`blockquote.keep`），然 Chromium 於框高過頁時不執行 break-inside:avoid，
+    標籤照樣孤留上頁；今改把標籤搬進表體——caption 屬表之一部，表若跨頁，表題必隨其首段
+    同行（且 thead 逐頁重現時表題不重出，caption 唯在表首）。"""
+    PAT = re.compile(
+        r'(?s)<blockquote>\s*<p[^>]*>\s*(?:<strong>)?(【[^<】]{2,40}】)(?:</strong>)?\s*:?\s*</p>\s*<table([^>]*)>')
+
+    def one(m):
+        print(u'  表題入表：%s' % m.group(1)[:22])
+        return (u'<blockquote><table%s><caption class="tbl-lbl">%s</caption>'
+                % (m.group(2), m.group(1)))
+
+    return PAT.sub(one, html)
+
+
 def pali_span(html):
     r"""梵巴轉寫之含變音符者，整詞包 `<span class="pali">`——免粗體時逐字落別家字型。
 
@@ -965,6 +989,9 @@ def scrub_ctrl(html):
 # 內文 12.2→13.2pt（+1pt）、標題同步 +1pt 保層級（h4 14.0 仍大於內文）、
 # 表格 10.3→12.2pt（貼近內文）、段距行距同步收緊抵銷增頁。
 PRINT_CSS = """
+/* 286・表題入表（見 label_table_keep）：表題與表身同命，不孤留上頁 */
+caption.tbl-lbl { caption-side: top; text-align: left; font-weight: 700;
+                  padding: .18em 0 .1em; break-after: avoid; }
 /* —— 全版字級間距覆寫（build38.py 自動附加，兩版共用）—— */
 html { font-size: 13.2pt; }
 body { line-height: 1.28; }
@@ -1057,6 +1084,7 @@ def render_html(toc_html):
     html = retune_tables(html, TBLW, TBLW_POW)
     html = table_keep(html)
     html = nowrap_case_ids(html)
+    html = label_table_keep(html)      # 先入 caption，再論鎖框
     html = quote_keep(html)
     html = fit_pre_blocks(html)
     html = pali_span(html)

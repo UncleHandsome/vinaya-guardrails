@@ -180,6 +180,12 @@ pre {
 }
 /* 高度可容一頁者由 build38 加 class="keep"：整圖不跨頁；長圖仍准按行界斷頁 */
 pre.keep { break-inside: avoid; page-break-inside: avoid; }
+/* 286・表前標籤歸表為 caption（見 build39.label_table_keep） */
+caption.tbl-lbl { caption-side: top; text-align: left; font-weight: 700;
+                  padding: .18em 0 .1em; break-after: avoid; }
+/* 286・表前標籤歸表為 caption：表題與表身同命，不再孤留上頁（見 build39.label_table_keep） */
+caption.tbl-lbl { caption-side: top; text-align: left; font-weight: 700;
+                  padding: .18em 0 .1em; break-after: avoid; }
 
 /* mermaid 圖（第 244 輪·由 build38.inline_mermaid() 就地嵌入之 SVG）：
    非等寬字符畫，故去 pre 之灰底框線；整體禁跨頁（SVG 斷不了的），並水平置中。 */
