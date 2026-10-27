@@ -775,6 +775,9 @@ def merge(parts, meta):
                        "prefix": u"合璧", "style": "D", "firstpagenum": 1})
         labels.append({"startpage": vol2_i, "prefix": u"卷二·", "style": "D", "firstpagenum": 1})
     d.set_page_labels(labels)
+    # 子集化：封面／隔頁所嵌之明體・黑體本是整檔（一檔數十 MB），不縮則合冊由 6.7 MB 漲至 34 MB。
+    # 只收本檔用到的字形（Chromium 之嵌入本已子集，重跑無損）；落檔後另以 pairface 辛目覆核。
+    d.subset_fonts()
     out = os.path.join(HERE, out_name)
     d.save(out, garbage=3, deflate=True)
     n = d.page_count
