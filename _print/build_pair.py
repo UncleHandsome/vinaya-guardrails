@@ -43,6 +43,15 @@ sys.argv = _ARGV
 
 TAG = "_screen" if SCREEN else ""
 TAGL = "螢幕版" if SCREEN else "影印版"
+MERGED_STEM = u"雙子星合冊_起心動念＋如法推尋_"     # 合冊檔名之唯一法源（產器與覆核尺共此一名）
+COVER_MUST = (chr(0x6B47), chr(0x548C), u"合 冊", u"起心動念", u"如法推尋",
+              u"雙 子 星 大 典")                      # 合冊封面必見之字（產器自證與 pairface 己目同源）
+COVER_EDGE = 45                                      # 封面一字不得越此界（同上，尺不另抄）
+
+
+def merged_name(ed):
+    return MERGED_STEM + ed + ".pdf"
+
 cn = bh._cn
 
 _HAN = "〇一二三四五六七八九十百"
@@ -102,23 +111,28 @@ def outline_pairs(lines):
 
 
 def cover_of(cfg, counts):
-    return """<section id="print-cover" class="cov">
-  <p class="cov-eyebrow">大正藏第一四二八號·四分律</p>
-  <div class="cov-main">
-    <div class="cov-sutra">%s</div>
-    <div class="cov-title">%s</div>
-    <div class="cov-rule"></div>
-    <p class="cov-sub">%s</p>
-    <p class="cov-motto">%s<br />%s</p>
-    <p class="cov-cap">%s・%s・%s</p>
-  </div>
-  <div class="cov-foot">
-    <p class="cov-edition">第一版·%s</p>
-    <p class="cov-meta">原典：漢譯《四分律》六十卷<br />姊妹篇《%s》互參</p>
-  </div>
+    """兩冊之專封面：同一骨架，四處相異——①眉標卷次 ②一字心印方印（歇／和，各出本卷終局之字）
+    ③框線之制（卷一雙細線／卷二外粗內虛）④分隔帶（double 線／實夾線）。另立『姊妹篇＝卷N』互認一行，
+    單頁在手即知為兩冊之哪一冊。純邊框與文字，不恃底色（無頭 Chromium 未開 print-background）。"""
+    return """<section id="print-cover" class="cov pcov pcov-%s">
+  <div class="pcov-out"><div class="pcov-in">
+    <p class="pcov-series">雙 子 星 大 典</p>
+    <p class="pcov-vol">%s・%s</p>
+    <div class="pcov-seal"><span>%s</span></div>
+    <p class="pcov-sealtag">本卷終局心印</p>
+    <p class="pcov-sutra">大正藏第一四二八號・四分律</p>
+    <p class="pcov-title">%s</p>
+    <p class="pcov-sub">%s</p>
+    <div class="pcov-band"></div>
+    <p class="pcov-motto">%s<br />%s</p>
+    <p class="pcov-count">%s・%s・%s</p>
+    <p class="pcov-twin">姊妹篇《%s》＝%s・%s・終局心印『%s』</p>
+    <p class="pcov-foot">第一版・%s　兩冊各自成冊，合冊本另為接排</p>
+  </div></div>
 </section>
-""" % (cfg["short"], cfg["subtitle"], cfg["subtitle2"], cfg["motto1"], cfg["motto2"],
-       counts["pian_c"], counts["zhang_c"], counts["cap"], TAGL, cfg["sister"])
+""" % (cfg["frame"], cfg["vol"], cfg["vol_cn"], cfg["seal"], cfg["short"], cfg["subtitle"],
+       cfg["motto1"], cfg["motto2"], counts["pian_c"], counts["zhang_c"], counts["cap"],
+       cfg["sister"], cfg["sister_vol"], cfg["sister_cn"], cfg["sister_seal"], TAGL)
 
 
 BOOKS = [
@@ -129,6 +143,9 @@ BOOKS = [
          motto2=u"臨事唯照起心動念　鏡不照人，專照己心",
          out=u"起心動念_四分律的心智顯微鏡與唯識解剖_",
          sister=u"如法推尋",
+         vol=u"卷 一", vol_cn=u"心 法 卷", seal=chr(0x6B47),          # 歇
+         sister_vol=u"卷 二", sister_cn=u"法 制 卷", sister_seal=chr(0x548C),  # 和
+         frame="a",
          part=re.compile(u"第[一二三四五六七八九十]+篇[:：]")),
     dict(key="2", short=u"如法推尋",
          file=u"如法推尋：僧伽憲政、法權審理與修復正義.txt",
@@ -137,6 +154,9 @@ BOOKS = [
          motto2=u"案結諍平，法架自捨　正法久住，天下無事",
          out=u"如法推尋_僧伽憲政法權審理與修復正義_",
          sister=u"起心動念",
+         vol=u"卷 二", vol_cn=u"法 制 卷", seal=chr(0x548C),          # 和
+         sister_vol=u"卷 一", sister_cn=u"心 法 卷", sister_seal=chr(0x6B47),  # 歇
+         frame="b",
          part=re.compile(u"第[一二三四五六七八九十]+篇[:：]")),
 ]
 
@@ -151,8 +171,46 @@ b38.PRINT_CSS = b38.PRINT_CSS + (
     "/* 頁碼口徑歸一：兩冊卷首已印絕對阿拉伯頁（五十輪定案之延伸），目錄頁不得中途改羅馬，"
     "故覆寫 print38.css 之 `page: toc`——目錄所報之號須與頁腳所印者同形。*/\n"
     ".toc-lead { page: auto; }\n"
-    "/* 目錄長條折行之续行：貼緊前一行、無多餘間隔（折行保字級，不縮字）*/\n"
+    "/* 目錄長條折行之續行：貼緊前一行、無多餘間隔（折行保字級，不縮字）*/\n"
     ".toc-cont { line-height: 1.12; margin: 0 0 -.18em; }\n"
+    "/* ── 雙子星專封面：兩冊同一骨架，四處相異（眉標卷次・一字心印方印・框線之制・分隔帶）"
+    "＋姊妹互認一行。純邊框與文字，不恃底色。── */\n"
+    ".pcov { width: 210mm; height: 296.6mm; padding: 16mm 18mm 18mm; }\n"
+    ".pcov-out { box-sizing: border-box; width: 100%; height: 100%;"
+    " border: 2.4px solid #000; padding: 2.2mm; }\n"
+    ".pcov-in { box-sizing: border-box; width: 100%; height: 100%; border: 1px solid #000;"
+    " display: flex; flex-direction: column; align-items: center; justify-content: center;"
+    " text-align: center; padding: 6mm 5mm; }\n"
+    ".pcov-b .pcov-in { border: 1px dashed #000; }\n"
+    ".pcov-series { font-size: 10.5pt; letter-spacing: .52em; text-indent: .52em;"
+    " color: #333; margin: 0; }\n"
+    ".pcov-vol { font-family: \"MingLiU\", \"PMingLiU\", serif; font-weight: 700; font-size: 15pt;"
+    " letter-spacing: .3em; text-indent: .3em; color: #000; margin: 3.4mm 0 7mm; }\n"
+    ".pcov-seal { box-sizing: border-box; width: 27mm; height: 27mm; border: 2.4px solid #000;"
+    " display: flex; align-items: center; justify-content: center; margin: 0 0 2.6mm; }\n"
+    ".pcov-seal span { font-family: \"MingLiU\", \"PMingLiU\", serif; font-size: 46pt;"
+    " line-height: 1; font-weight: 600; color: #000; }\n"
+    ".pcov-sealtag { font-size: 9.5pt; letter-spacing: .26em; text-indent: .26em;"
+    " color: #555; margin: 0 0 8mm; }\n"
+    ".pcov-sutra { font-size: 10.5pt; letter-spacing: .3em; text-indent: .3em;"
+    " color: #444; margin: 0; }\n"
+    ".pcov-title { font-family: \"MingLiU\", \"PMingLiU\", serif; font-size: 33pt;"
+    " font-weight: 600; letter-spacing: .22em; text-indent: .22em; line-height: 1.25;"
+    " color: #000; margin: 4.5mm 0 0; }\n"
+    ".pcov-sub { font-size: 12.5pt; letter-spacing: .1em; color: #222; margin: 3.2mm 0 0;"
+    " line-height: 1.7; }\n"
+    ".pcov-band { width: 58mm; height: 0; border-top: 3px double #000; margin: 8mm auto; }\n"
+    ".pcov-b .pcov-band { height: 2.6mm; border-top: 2px solid #000;"
+    " border-bottom: 1px solid #000; }\n"
+    ".pcov-motto { font-family: \"MingLiU\", \"PMingLiU\", serif; font-size: 13pt;"
+    " line-height: 2; letter-spacing: .12em; text-indent: .12em; color: #000;"
+    " font-weight: 600; margin: 0; }\n"
+    ".pcov-count { font-size: 10.5pt; letter-spacing: .18em; text-indent: .18em;"
+    " color: #444; margin: 5mm 0 0; }\n"
+    ".pcov-twin { font-size: 10.5pt; letter-spacing: .08em; color: #111; margin: 9mm 0 0;"
+    " border-top: 1px solid #999; padding-top: 3.4mm; }\n"
+    ".pcov-foot { font-size: 10pt; letter-spacing: .16em; text-indent: .16em;"
+    " color: #555; margin: 6mm 0 0; }\n"
 )
 
 
@@ -540,11 +598,74 @@ def divider_lines(a, b):
             u"另：兩卷各自之獨立檔（螢幕版・影印版）俱在，便於分卷誦讀與單卷印製。"]
 
 
+def draw_pair_cover(pg, sizes, edition):
+    """合冊之專封面（一頁看盡兩卷）：雙框＋兩方心印（歇／和）＋兩卷書名與自算頁數。
+    居中一律交 `insert_textbox(align=1)`——手算字寬必偏（舊法右移且長行出框，實測現形）；
+    每行取回之剩餘高度 <0 即擲（溢出不可靜默）。純黑白，影印分明。"""
+    import pymupdf as pm
+    w, h = pg.rect.width, pg.rect.height
+    for m, sw in ((34, 1.6), (41, 0.5)):
+        pg.draw_rect(pm.Rect(m, m, w - m, h - m), color=(0, 0, 0), width=sw)
+    IN = 52                                          # 內文距框之留白
+
+    def cen(y, s, txt, font="china-s", lh=1.5):
+        rc = pg.insert_textbox(pm.Rect(IN, y, w - IN, y + s * lh * 4), txt, fontname=font,
+                               fontsize=s, lineheight=lh, color=(0, 0, 0), align=1)
+        if rc < 0:
+            raise SystemExit(u"合冊封面之文溢出框外（%s…）" % txt[:18])
+        return rc
+
+    cen(h * 0.20, 12.5, u"雙 子 星 大 典")
+    cen(h * 0.245, 19, u"合 冊　・　卷 一 ＋ 卷 二", font="china-ss")
+    box, gap = 58.0, 46.0
+    x_l = (w - 2 * box - gap) / 2
+    for i, (ch, cap) in enumerate(((chr(0x6B47), u"心法卷終局心印"), (chr(0x548C), u"法制卷終局心印"))):
+        x0 = x_l + i * (box + gap)
+        top = h * 0.315
+        pg.draw_rect(pm.Rect(x0, top, x0 + box, top + box), color=(0, 0, 0), width=1.5)
+        rc = pg.insert_textbox(pm.Rect(x0 + 3, top + 3, x0 + box - 3, top + box - 3), ch,
+                               fontname="china-ss", fontsize=30, lineheight=1.0,
+                               color=(0, 0, 0), align=1)
+        if rc < 0:
+            raise SystemExit(u"印中之字放不下（box=%dpt・字 30pt）➔%s" % (box, ch))
+        pg.insert_textbox(pm.Rect(x0 - 14, top + box + 5, x0 + box + 14, top + box + 24), cap,
+                          fontname="china-s", fontsize=9.0, color=(0.2, 0.2, 0.2), align=1)
+    y = h * 0.475
+    for i, (nm, sub) in enumerate((
+            (u"起心動念", u"四分律的心智顯微鏡與唯識解剖"),
+            (u"如法推尋", u"僧伽憲政、法權審理與修復正義"))):
+        cen(y, 16, u"《%s》　%d 頁" % (nm, sizes[i]), font="china-ss")
+        cen(y + 21, 10.5, sub)
+        y += 56
+    pg.draw_line(pm.Point(w / 2 - 62, y - 12), pm.Point(w / 2 + 62, y - 12),
+                 color=(0, 0, 0), width=1.1)
+    cen(y + 14, 11, u"心法卷為修己之鏡　法制卷為立憲之柱　一體兩翼，名同位異")
+    for k, line in enumerate((
+            u"本冊係兩卷接排：卷一 %d 頁在前，卷二 %d 頁在後。" % (sizes[0], sizes[1]),
+            u"兩卷頁碼各自為起訖（見卷間『合璧說明』），跨冊之引依凡例第七律以號索之。",
+            u"分卷之獨立檔（卷一・卷二，螢幕版與影印版）俱在，便於分卷誦讀與單卷印製。")):
+        cen(y + 42 + k * 20, 10, line)
+    cen(h * 0.845, 11.5, u"第一版・%s" % edition, font="china-ss")
+    # 產物層自證①：該上之字須真在冊上（`insert_textbox` 放不下時**靜默不畫**，
+    # 橫界之檢查看不到『沒有字』——舊框 19.7pt 容 33pt 之印字遂成空框，今雙檢）。
+    gone = [ch for ch in COVER_MUST if ch not in pg.get_text()]
+    if gone:
+        raise SystemExit(u"合冊封面缺字（畫了卻不見）：%s" % u"、".join(gone))
+    # 產物層自證②：任何一字越內框半步即擲（`insert_textbox` 於無空格之中文不折行，
+    # 橫向溢出非其回值所能報——故自量詞之邊界，不靠眼過）。
+    bad = []
+    for x0, y0, x1, y1, word, *_ in pg.get_text("words"):
+        if x1 > w - COVER_EDGE or x0 < COVER_EDGE or y1 > h - COVER_EDGE or y0 < COVER_EDGE:
+            bad.append(u"%s[%.0f,%.0f]" % (word[:8], x1, y1))
+    if bad:
+        raise SystemExit(u"合冊封面有字出框：%d 處 ➔ %s" % (len(bad), u"、".join(bad[:6])))
+
+
 def merge(parts, meta):
-    """兩冊合為一檔（書籤接排・頁碼平移・卷間立『合璧說明』隔頁）——供『兩本建成一個 PDF』之讀法。
+    """兩冊合為一檔（合冊專封面・書籤接排・頁碼平移・卷間立『合璧說明』隔頁）。
     個別交付檔仍留存，合冊另出名，兩者同源同版。頁碼故不强行通編：兩卷各自之頁碼即其身分。"""
     import pymupdf as pm
-    out_name = meta.pop("_out", u"雙子星合冊_%s.pdf" % TAGL)
+    out_name = meta.pop("_out", merged_name(TAGL))
     d = pm.open()
     toc, cur = [], 0
     sizes = []
@@ -553,6 +674,12 @@ def merge(parts, meta):
         sizes.append(t0.page_count)
         t0.close()
     div = divider_lines(sizes[0], sizes[1]) if len(sizes) > 1 else None
+    if sizes:
+        s0 = pm.open(parts[0])
+        cov = d.new_page(pno=0, width=s0[0].rect.width, height=s0[0].rect.height)
+        draw_pair_cover(cov, sizes, TAGL)
+        s0.close()
+        cur = 1                                      # 合冊封面占一頁：書籤一律右移一頁
     for i, p0 in enumerate(parts):
         s = pm.open(p0)
         shift = 0
@@ -599,7 +726,7 @@ def main():
                 "author": u"編者", "subject": u"四分律之心智現象學與僧伽憲政學",
                 "keywords": u"四分律；毘奈耶；心所；羯磨；大正藏 No.1428",
                 "creator": u"build_pair 管線（沿用 build38 之法源）", "producer": u"build_pair",
-                "_out": u"雙子星合冊_起心動念＋如法推尋_%s.pdf" % TAGL}
+                "_out": merged_name(TAGL)}
         merged, mn, mtoc = merge([g[0] for g in got], meta)
         print("✓ %s｜%d 頁・書籤接排 %d 條" % (os.path.basename(merged), mn, mtoc))
 

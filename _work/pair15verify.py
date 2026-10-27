@@ -14,6 +14,8 @@ import _tk                                            # noqa: E402
 F1 = next(os.path.join(ROOT, x) for x in os.listdir(ROOT) if x.startswith(u"起心動念") and x.endswith(u".txt"))
 F2 = next(os.path.join(ROOT, x) for x in os.listdir(ROOT) if x.startswith(u"如法推尋") and x.endswith(u".txt"))
 P = os.path.join(ROOT, "_print")
+sys.path.insert(0, P)
+import build_pair as BP                                 # noqa: E402  （印檔名之唯一法源：產器與尺共此一名）
 
 
 def rd(p):
@@ -23,6 +25,7 @@ def rd(p):
 A, B = rd(F1), rd(F2)
 print("=" * 72)
 print("十五案・逐條對帳（今檔）")
+CK_BAD = []          # 逐案之 ✗ 須退碼（報而不退＝啞尺：丁2 之假紅歷一輪而 rc 仍 0）
 CK = [
     (u"甲2① 第一人稱自救節", lambda: [l for l in A if u"觀心提撕：法非絕人之路" in l],
      u"卷一 第十一章第三節"),
@@ -35,13 +38,23 @@ CK = [
     (u"戊1 檢綱定名", lambda: [l for l in B if u"執事開庭十六項一票否決檢綱" in l], u"二十章第一節"),
     (u"戊1 宣告定名", lambda: [l for l in B if u"四署心證自律宣告式" in l], u"二十章第二節"),
     (u"戊1 查考級稱名", lambda: [l for l in B if u"開庭十六項檢綱與四署宣告" in l], u"卷首附說二"),
-    (u"丁2 對照圖之雙卡", lambda: [l for l in A if re.search(u"發動鏈對照】･[上下]卡", l)], u"四張卡"),
+    (u"丁2 對照圖之雙卡",
+     lambda: [l for l in A
+              if re.search(u"發動鏈對照】" + chr(0x30FB) + u"[上下]卡", l)],
+     u"兩圖四卡"),
 ]
+WANT = {u"丁2 對照圖之雙卡": 4}      # 數之宣稱須點名實數（非空即綠則兩卡亦綠，其病為『少一張』）
 for tag, f, note in CK:
     got = f()
     want_empty = tag.startswith(u"丁3")
-    ok = (not got) if want_empty else bool(got)
+    if tag in WANT:
+        ok = len(got) == WANT[tag]
+        note += u"・須 %d 見" % WANT[tag]
+    else:
+        ok = (not got) if want_empty else bool(got)
     print("  %-22s %s・%d 見｜%s" % (tag, u"✓" if ok else u"✗", len(got), note))
+    if not ok:
+        CK_BAD.append(tag)
     if got and not want_empty:
         print("        " + got[0].strip()[:88])
 
@@ -82,10 +95,9 @@ print(u"  本律無形而他典有形（他典之引・屬正）：%d 條" % len
 
 print("=" * 72)
 print("印面｜四檔之頁數・細字・圍欄同頁")
-for stem, short in ((u"起心動念_四分律的心智顯微鏡與唯識解剖_", u"F1"),
-                    (u"如法推尋_僧伽憲政法權審理與修復正義_", u"F2")):
+for cfg, short in ((BP.BOOKS[0], u"F1"), (BP.BOOKS[1], u"F2")):
     for ed in (u"螢幕版", u"影印版"):
-        d = pymupdf.open(os.path.join(P, stem + ed + u".pdf"))
+        d = pymupdf.open(os.path.join(P, cfg["out"] + ed + u".pdf"))
         lo, n9 = 99, 0
         for p in range(d.page_count):
             for b in d[p].get_text("dict")["blocks"]:
@@ -98,6 +110,13 @@ for stem, short in ((u"起心動念_四分律的心智顯微鏡與唯識解剖_"
               % (short, ed, d.page_count, lo, n9))
         d.close()
 for ed in (u"螢幕版", u"影印版"):
-    d = pymupdf.open(os.path.join(P, u"雙子星合冊_起心動念＋如法推尋_" + ed + u".pdf"))
+    d = pymupdf.open(os.path.join(P, BP.merged_name(ed)))
     print(u"  合冊｜%s・%d 頁・書籤 %d 條" % (ed, d.page_count, len(d.get_toc())))
     d.close()
+
+print("=" * 72)
+if CK_BAD:
+    print(u"✗ 退碼之案：%d 項 ➔ %s" % (len(CK_BAD), u"、".join(CK_BAD)))
+    sys.exit(1)
+print(u"✓ 十五案俱對帳（逐案實數見上）・印面六檔俱已量（細字屬 pairface 之註記軸，此目不退碼）。"
+      u"（式樣之 28 條屬全書性候裁案，不入退碼——見上『俱無形』之軟報）")
