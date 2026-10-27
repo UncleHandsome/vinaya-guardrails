@@ -768,14 +768,13 @@ def merge(parts, meta):
         extra = 0
         if i and div:
             w, h = s[0].rect.width, s[0].rect.height
-            # 落版：隔頁自 recto 起、占 recto＋verso 兩頁；卷二遂自次一 recto 起，不必另補空白
-            # （舊法一頁隔頁＋一頁補白，合冊恆有一整頁無字）。
-            if layout_pad(sizes[0]):
-                d.new_page(pno=d.page_count, width=w, height=h)
-                pad_i = d.page_count - 1
-                extra += 1
-            div_i = d.page_count
-            for blk in div:
+            # 落版自適應：隔頁之後，卷二須自 recto（0-based 偶）起。
+            # 落點若為 recto → 隔頁用兩頁（recto＋verso，第二頁讀法四則）；
+            # 落點若為 verso → 隔頁用一頁（含讀法四則）。兩途皆使卷二自 recto 起，且毋須補白。
+            land = d.page_count
+            div_i = land
+            blocks = [div[0] + div[1]] if land % 2 == 1 else [div[0], div[1]]
+            for blk in blocks:
                 n = d.page_count
                 pg = d.new_page(pno=n, width=w, height=h)
                 pg.insert_textbox(pm.Rect(58, 92, w - 58, h - 74), chr(10).join(blk),
@@ -792,12 +791,11 @@ def merge(parts, meta):
         s.close()
     d.set_metadata(meta)
     d.set_toc(toc)
-    if vol2_i is not None:                            # 落版之自證：隔頁落 verso・卷二自 recto 起
-        if vol2_i % 2 != 0 or div_i % 2 != 0:
-            raise SystemExit(u"落版不合（隔頁 0-based %s・卷二 0-based %s；俱應為偶（recto））"
-                             % (div_i, vol2_i))
+    if vol2_i is not None:                            # 落版之自證：卷二必自 recto 起
+        if vol2_i % 2 != 0:
+            raise SystemExit(u"落版不合（卷二 0-based %s；應為偶＝recto）" % vol2_i)
     # 邏輯頁碼標籤：兩卷各自起訖（合冊通編則檢視器之『第 50 頁』無從索，二卷之 50 頁相撞）。
-    # 範圍：封面 1 頁・卷一・合璧說明 1 頁・卷二；號與頁腳所印者同形。
+    # 範圍：封面 1 頁・卷一・合璧說明 1–2 頁・卷二；號與頁腳所印者同形。
     labels = [{"startpage": 0, "prefix": u"封面", "style": "D", "firstpagenum": 1},
               {"startpage": 1, "prefix": u"卷一·", "style": "D", "firstpagenum": 1}]
     if vol2_i is not None:
