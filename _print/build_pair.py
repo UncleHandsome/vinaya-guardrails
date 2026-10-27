@@ -52,6 +52,29 @@ COVER_EDGE = 45                                      # 封面一字不得越此�
 def merged_name(ed):
     return MERGED_STEM + ed + ".pdf"
 
+
+def layout_pad(n1):
+    """卷一有 n1 頁時，隔頁之後是否須補一空白頁（使卷二自 recto 起）。
+    封面 1 頁＋卷一 n1 頁→隔頁落 2+n1（1-based）；為奇則落 recto，其後須補白，卷二方仍自 recto。"""
+    return 1 if (2 + n1) % 2 == 1 else 0
+
+
+def cjk_font(pg, kind="serif", tag="pf"):
+    """把系統中文字型檔**嵌入**本頁，回其字型名。
+    合冊封面與合璧說明是 pymupdf 直畫之頁，舊用內建 `china-s`／`china-ss`——PyMuPDF 之 CJK
+    內建字型**不嵌入**（`get_page_fonts` 之 ext='n/a'），換檢視器即整頁隱形（外路實測：只見
+    兩方框與數字，文字層俱在而畫不出）。故一律取字型檔，嵌入後方繪。"""
+    win = os.environ.get("WINDIR", r"C:\Windows")
+    cands = ("mingliu.ttc", "simsun.ttc") if kind == "serif" else ("msjh.ttc", "msyh.ttc")
+    for n in cands:
+        p = os.path.join(win, "Fonts", n)
+        if os.path.isfile(p):
+            nm = tag + ("s" if kind == "serif" else "h")
+            pg.insert_font(fontname=nm, fontfile=p)
+            return nm
+    raise SystemExit(u"找不到可嵌入之中文字型檔（%s）——直畫之封面將成隱形字"
+                     % u"／".join(cands))
+
 cn = bh._cn
 
 _HAN = "〇一二三四五六七八九十百"
@@ -173,6 +196,11 @@ b38.PRINT_CSS = b38.PRINT_CSS + (
     ".toc-lead { page: auto; }\n"
     "/* 目錄長條折行之續行：貼緊前一行、無多餘間隔（折行保字級，不縮字）*/\n"
     ".toc-cont { line-height: 1.12; margin: 0 0 -.18em; }\n"
+    "/* 標題不落頁底：節／卡之題與其下第一塊同頁（外路第十六報告：案卷卡之題與引文孤立\n"
+    "   頁底而正文全在次頁）；表圖之題同法，不與其表分家。惟 .part-open 已另有其制。*/\n"
+    "h3, h4, h5 { break-after: avoid; }\n"
+    "blockquote > p:first-child { break-after: avoid; }\n"
+    ".keep { break-inside: avoid; }\n"
     "/* ── 雙子星專封面：兩冊同一骨架，四處相異（眉標卷次・一字心印方印・框線之制・分隔帶）"
     "＋姊妹互認一行。純邊框與文字，不恃底色。── */\n"
     ".pcov { width: 210mm; height: 296.6mm; padding: 16mm 18mm 18mm; }\n"
@@ -374,24 +402,47 @@ def toc_pages_of(doc):
     return out
 
 
+HEAD_MIN_PT = 13.4          # 正文 12.96pt；H4 13.74・H3 14.73・H2 17.86・篇題 23（俱實測）
+
+
 def locate(doc, heads, skip=()):
-    """標題在**已印出之冊**中定物理頁：單調游標＋全頁文字摺空白（印面折行會插斷整串搜尋）。
-       `skip` 為目錄頁集——目錄行內含全書標題，不擯之則『自序』等卷首之題會誤指目錄自己那頁。"""
-    txt = [fold(doc[i].get_text()) for i in range(doc.page_count)]
-    pages = [None if (i + 1) in skip else txt[i] for i in range(len(txt))]
+    """標題在**已印出之冊**中定物理頁：單調游標＋**逐行**立尺（行首＋字級下限）。
+    舊法以全頁摺平字串求『包含』——正文之預告句『【第三章 衡平動機…】。』與真標題同形，
+    遂先於真標題被逮（外路實測：目錄第三章印 26・H2 實在 27）。今以行為單位：行首須為
+    標題（摺平後之前綴）且該行字級 ≥ 13.4pt，正文之提稱句（12.96pt）自不入；五級以下
+    （款・目）字級近正文，仍用舊法之全頁比對，免書籤漏收。
+    `skip` 為目錄頁集——目錄行內含全書標題，不擯之則『自序』等卷首之題會誤指目錄自己那頁。"""
+    txt, rows = [], []
+    for i in range(doc.page_count):
+        txt.append(fold(doc[i].get_text()))
+        if (i + 1) in skip:
+            rows.append(None)
+            continue
+        ls = []
+        for b in doc[i].get_text("dict")["blocks"]:
+            for ln in b.get("lines", []):
+                s = "".join(sp["text"] for sp in ln["spans"])
+                if s.strip():
+                    ls.append((fold(s), max(sp["size"] for sp in ln["spans"])))
+        rows.append(ls)
     got, cur, miss, pm = [], 0, [], {}
     for lv, t in heads:
         f = fold(t)
         hit = None
-        for p in range(cur, len(pages)):
-            if f and pages[p] and f in pages[p]:
+        for p in list(range(cur, len(rows))) + list(range(0, cur)):   # 先游標之後，再回頭
+            if rows[p] is None or not f:
+                continue
+            if lv <= 4:
+                # 行首之判須『往返』：整題見於一行，或該行是題之首段（標題折行）。
+                # 只取前 14 字作前綴則『…（篇·上）』與『…（篇·下）』相搶（實測：二籤同指 147）。
+                hit_ok = any(sz >= HEAD_MIN_PT and
+                             (lt.startswith(f) or (f.startswith(lt) and len(lt) >= 12))
+                             for lt, sz in rows[p])
+            else:
+                hit_ok = f in txt[p]
+            if hit_ok:
                 hit = p + 1
                 break
-        if hit is None:                      # 游標之後求不得，回頭全冊再掃一次
-            for p in range(len(pages)):
-                if f and pages[p] and f in pages[p]:
-                    hit = p + 1
-                    break
         if hit is None:
             miss.append(t[:22])
             continue
@@ -604,19 +655,21 @@ def draw_pair_cover(pg, sizes, edition):
     每行取回之剩餘高度 <0 即擲（溢出不可靜默）。純黑白，影印分明。"""
     import pymupdf as pm
     w, h = pg.rect.width, pg.rect.height
+    fs, fh = cjk_font(pg, "serif", "pcv"), cjk_font(pg, "sans", "pcv")
     for m, sw in ((34, 1.6), (41, 0.5)):
         pg.draw_rect(pm.Rect(m, m, w - m, h - m), color=(0, 0, 0), width=sw)
     IN = 52                                          # 內文距框之留白
 
-    def cen(y, s, txt, font="china-s", lh=1.5):
+    def cen(y, s, txt, font=None, lh=1.5):
+        font = font or fs
         rc = pg.insert_textbox(pm.Rect(IN, y, w - IN, y + s * lh * 4), txt, fontname=font,
                                fontsize=s, lineheight=lh, color=(0, 0, 0), align=1)
         if rc < 0:
             raise SystemExit(u"合冊封面之文溢出框外（%s…）" % txt[:18])
         return rc
 
-    cen(h * 0.20, 12.5, u"雙 子 星 大 典")
-    cen(h * 0.245, 19, u"合 冊　・　卷 一 ＋ 卷 二", font="china-ss")
+    cen(h * 0.20, 12.5, u"雙 子 星 大 典", font=fh)
+    cen(h * 0.245, 19, u"合 冊　・　卷 一 ＋ 卷 二", font=fs)
     box, gap = 58.0, 46.0
     x_l = (w - 2 * box - gap) / 2
     for i, (ch, cap) in enumerate(((chr(0x6B47), u"心法卷終局心印"), (chr(0x548C), u"法制卷終局心印"))):
@@ -624,28 +677,28 @@ def draw_pair_cover(pg, sizes, edition):
         top = h * 0.315
         pg.draw_rect(pm.Rect(x0, top, x0 + box, top + box), color=(0, 0, 0), width=1.5)
         rc = pg.insert_textbox(pm.Rect(x0 + 3, top + 3, x0 + box - 3, top + box - 3), ch,
-                               fontname="china-ss", fontsize=30, lineheight=1.0,
+                               fontname=fs, fontsize=30, lineheight=1.0,
                                color=(0, 0, 0), align=1)
         if rc < 0:
             raise SystemExit(u"印中之字放不下（box=%dpt・字 30pt）➔%s" % (box, ch))
         pg.insert_textbox(pm.Rect(x0 - 14, top + box + 5, x0 + box + 14, top + box + 24), cap,
-                          fontname="china-s", fontsize=9.0, color=(0.2, 0.2, 0.2), align=1)
+                          fontname=fs, fontsize=9.0, color=(0.2, 0.2, 0.2), align=1)
     y = h * 0.475
     for i, (nm, sub) in enumerate((
             (u"起心動念", u"四分律的心智顯微鏡與唯識解剖"),
             (u"如法推尋", u"僧伽憲政、法權審理與修復正義"))):
-        cen(y, 16, u"《%s》　%d 頁" % (nm, sizes[i]), font="china-ss")
-        cen(y + 21, 10.5, sub)
+        cen(y, 16, u"《%s》　%d 頁" % (nm, sizes[i]), font=fs)
+        cen(y + 21, 10.5, sub, font=fh)
         y += 56
     pg.draw_line(pm.Point(w / 2 - 62, y - 12), pm.Point(w / 2 + 62, y - 12),
                  color=(0, 0, 0), width=1.1)
-    cen(y + 14, 11, u"心法卷為修己之鏡　法制卷為立憲之柱　一體兩翼，名同位異")
+    cen(y + 14, 11, u"心法卷為修己之鏡　法制卷為立憲之柱　一體兩翼，名同位異", font=fh)
     for k, line in enumerate((
             u"本冊係兩卷接排：卷一 %d 頁在前，卷二 %d 頁在後。" % (sizes[0], sizes[1]),
             u"兩卷頁碼各自為起訖（見卷間『合璧說明』），跨冊之引依凡例第七律以號索之。",
             u"分卷之獨立檔（卷一・卷二，螢幕版與影印版）俱在，便於分卷誦讀與單卷印製。")):
-        cen(y + 42 + k * 20, 10, line)
-    cen(h * 0.845, 11.5, u"第一版・%s" % edition, font="china-ss")
+        cen(y + 42 + k * 20, 10, line, font=fh)
+    cen(h * 0.845, 11.5, u"第一版・%s" % edition, font=fh)
     # 產物層自證①：該上之字須真在冊上（`insert_textbox` 放不下時**靜默不畫**，
     # 橫界之檢查看不到『沒有字』——舊框 19.7pt 容 33pt 之印字遂成空框，今雙檢）。
     gone = [ch for ch in COVER_MUST if ch not in pg.get_text()]
@@ -680,30 +733,59 @@ def merge(parts, meta):
         draw_pair_cover(cov, sizes, TAGL)
         s0.close()
         cur = 1                                      # 合冊封面占一頁：書籤一律右移一頁
+    pad_i = div_i = vol2_i = None
     for i, p0 in enumerate(parts):
         s = pm.open(p0)
-        shift = 0
+        extra = 0
         if i and div:
             w, h = s[0].rect.width, s[0].rect.height
+            # 落版（recto/verso）：封面在 recto（1-based 奇數），雙面印時卷二之封面亦須落 recto。
+            # 隔頁若不補白，卷二之起即隨卷一頁數之奇偶而漂——本波加一頁便現形（卷二封面落 p124＝verso）。
+            # 今自算：隔頁落 verso（1-based 偶），卷二自 recto 起；隔頁若將落 recto，先補一空白。
+            if layout_pad(sizes[0]):
+                d.new_page(pno=d.page_count, width=w, height=h)
+                pad_i = d.page_count - 1
+                extra += 1
             n = d.page_count
             pg = d.new_page(pno=n, width=w, height=h)
             pg.insert_textbox(pm.Rect(58, 92, w - 58, h - 74), chr(10).join(div),
-                              fontname="china-s", fontsize=11.5, lineheight=1.62)
+                              fontname=cjk_font(pg, "serif", "div"), fontsize=11.5, lineheight=1.62)
             toc.append([1, u"合璧說明", n + 1])
-            shift = 1
+            div_i = n
+            extra += 1
+        if i:
+            vol2_i = d.page_count
         d.insert_pdf(s)
         for lvl, t, pg2 in s.get_toc():
-            toc.append([lvl, t, pg2 + cur + shift])
-        cur += s.page_count + shift
+            toc.append([lvl, t, pg2 + cur + extra])
+        cur += s.page_count + extra
         s.close()
     d.set_metadata(meta)
     d.set_toc(toc)
+    if vol2_i is not None:                            # 落版之自證：隔頁落 verso・卷二自 recto 起
+        if vol2_i % 2 != 0 or div_i % 2 != 1:
+            raise SystemExit(u"落版不合（隔頁 0-based %s・卷二 0-based %s；應 奇／偶）"
+                             % (div_i, vol2_i))
+    # 邏輯頁碼標籤：兩卷各自起訖（合冊通編則檢視器之『第 50 頁』無從索，二卷之 50 頁相撞）。
+    # 範圍：封面 1 頁・卷一・合璧說明 1 頁・卷二；號與頁腳所印者同形。
+    labels = [{"startpage": 0, "prefix": u"封面", "style": "D", "firstpagenum": 1},
+              {"startpage": 1, "prefix": u"卷一·", "style": "D", "firstpagenum": 1}]
+    if vol2_i is not None:
+        labels.append({"startpage": pad_i if pad_i is not None else div_i,
+                       "prefix": u"合璧", "style": "D", "firstpagenum": 1})
+        labels.append({"startpage": vol2_i, "prefix": u"卷二·", "style": "D", "firstpagenum": 1})
+    d.set_page_labels(labels)
     out = os.path.join(HERE, out_name)
     d.save(out, garbage=3, deflate=True)
     n = d.page_count
     d.close()
-    print("\n合冊：%s｜%d 頁｜%d KB｜書籤 %d 條"
-          % (os.path.basename(out), n, os.path.getsize(out) // 1024, len(toc)))
+    chk = pm.open(out)
+    nl = len(chk.get_page_labels())
+    chk.close()
+    if nl != len(labels):
+        raise SystemExit(u"邏輯頁碼標籤未落（寫 %d 段・讀回 %d 段）" % (len(labels), nl))
+    print("\n合冊：%s｜%d 頁｜%d KB｜書籤 %d 條｜邏輯頁碼 %d 段"
+          % (os.path.basename(out), n, os.path.getsize(out) // 1024, len(toc), nl))
     return out, n, len(toc)
 
 def main():

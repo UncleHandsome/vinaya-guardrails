@@ -175,12 +175,13 @@ for ed in ("螢幕版", "影印版"):
     mrg_w, mrg_h = dm[0].rect.width, dm[0].rect.height
     for x in ds:
         x.close()
-    exp_n = 2 + nv[0] + nv[1]                    # 合冊封面 1 頁＋卷間『合璧說明』隔頁 1 頁
+    pad = BP.layout_pad(nv[0])                   # 落版之補白（卷二須自 recto 起，見 build_pair）
+    exp_n = 2 + nv[0] + nv[1] + pad              # 封面 1＋卷一＋隔頁 1＋卷二甲補白
     exp_t = tv[0] + tv[1] + 1                    # ＋隔頁之籤一條
-    div_pg = 2 + nv[0]                           # 1-based：封面 1・卷一 2..(1+nv0)・隔頁 (2+nv0)
+    div_pg = 2 + nv[0] + pad                     # 1-based：封面 1・卷一 2..(1+nv0)・補白・隔頁
     pages = [fold(dm[i].get_text()) for i in range(nm)]
-    print("  甲 頁數 %d（自算 2＋%d＋%d＝%d）・%d KB・書籤 %d 條（自算 %d＋%d＋1＝%d）"
-          % (nm, nv[0], nv[1], exp_n, os.path.getsize(mrg) // 1024, len(toc),
+    print("  甲 頁數 %d（自算 2＋%d＋%d＋補白 %d＝%d）・%d KB・書籤 %d 條（自算 %d＋%d＋1＝%d）"
+          % (nm, nv[0], nv[1], pad, exp_n, os.path.getsize(mrg) // 1024, len(toc),
              tv[0], tv[1], exp_t))
     if nm != exp_n:
         errs.append("合冊%s：頁數不合（實 %d・算 %d）——接排多頁或少頁" % (ed, nm, exp_n))
@@ -205,6 +206,16 @@ for ed in ("螢幕版", "影印版"):
         errs.append("合冊%s：%d 條書籤指向封面頁 ➔ %s" % (ed, len(oncov), "、".join(oncov[:3])))
     if u"合璧說明" not in pages[div_pg - 1]:
         errs.append("合冊%s：自算之隔頁 p%d 不見『合璧說明』" % (ed, div_pg))
+    # 落版（recto/verso）：卷二之首頁須為 1-based 奇（recto）；隔頁落 verso；補白頁須真空白。
+    vol2_pg = div_pg + 1
+    print("  庚 落版：隔頁 p%d（%s）・卷二起 p%d（%s）・補白 %s"
+          % (div_pg, u"verso ✓" if div_pg % 2 == 0 else u"recto ✗",
+             vol2_pg, u"recto ✓" if vol2_pg % 2 == 1 else u"verso ✗",
+             (u"p%d 空白 %s" % (div_pg - 1, u"✓" if not pages[div_pg - 2].strip() else u"✗")) if pad else u"無"))
+    if vol2_pg % 2 != 1 or div_pg % 2 != 0:
+        errs.append("合冊%s：落版不合（隔頁 p%d・卷二 p%d；應 隔頁 verso・卷二 recto）" % (ed, div_pg, vol2_pg))
+    if pad and pages[div_pg - 2].strip():
+        errs.append("合冊%s：補白頁 p%d 非空白" % (ed, div_pg - 1))
 
     sizes, thin = {}, []
     for i in range(nm):
@@ -241,6 +252,29 @@ for ed in ("螢幕版", "影印版"):
     if bad:
         errs.append("合冊%s：封面有字出界 %d 處 ➔ %s" % (ed, len(bad), "、".join(bad[:4])))
     dm.close()
+
+# ── 辛・字型嵌入（六檔）：Type0 而無嵌入檔者即紅——換檢視器即成空白（外路第十六報告之病根）；
+#    Type3 者其 CharProc 自足（本冊即『➔』U+2794 之向量字形），只報其數，不計病。
+print("=" * 74)
+print("■ 字型嵌入（六檔）")
+FILES = [(cfg["out"] + ed + ".pdf", cfg["key"] + "｜" + ed)
+         for cfg in BP.BOOKS for ed in (u"螢幕版", u"影印版")]
+FILES += [(BP.merged_name(ed), u"合冊｜" + ed) for ed in (u"螢幕版", u"影印版")]
+for fnm, tag in FILES:
+    df = pm.open(str(ROOT / "_print" / fnm))
+    bad, t3 = {}, set()
+    for p in range(df.page_count):
+        for xf in df.get_page_fonts(p):
+            if xf[2] == "Type3":
+                t3.add(p + 1)
+            elif xf[1] in ("n/a", ""):
+                bad.setdefault(xf[3] or u"(無名)", set()).add(p + 1)
+    df.close()
+    print("  %s：未嵌入 %d 種・Type3（自足）%d 頁" % (tag, len(bad), len(t3)))
+    for k, v in bad.items():
+        print("       ⚠ %s ➔ 頁 %s" % (k, sorted(v)[:6]))
+    if bad:
+        errs.append("%s：%d 種字型未嵌入（%s）" % (tag, len(bad), "、".join(bad)))
 
 for x in notes:
     print("・", x)
