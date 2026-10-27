@@ -199,7 +199,7 @@ b38.PRINT_CSS = b38.PRINT_CSS + (
     "/* 標題不落頁底：節／卡之題與其下第一塊同頁（外路第十六報告：案卷卡之題與引文孤立\n"
     "   頁底而正文全在次頁）；表圖之題同法，不與其表分家。惟 .part-open 已另有其制。*/\n"
     "h3, h4, h5 { break-after: avoid; }\n"
-    "blockquote > p:first-child { break-after: avoid; }\n"
+    ".cap { break-after: avoid; }   /* 表圖之題（產器標記），不與其表分家；引文塊之首段不在此列 */\n"
     ".keep { break-inside: avoid; }\n"
     "/* ── 雙子星專封面：兩冊同一骨架，四處相異（眉標卷次・一字心印方印・框線之制・分隔帶）"
     "＋姊妹互認一行。純邊框與文字，不恃底色。── */\n"
@@ -477,6 +477,30 @@ def entry_map(entries, pm):
 
 
 
+def pair_tighten():
+    """印前兩事（本冊之制）：
+    ①篇扉頁不獨佔一頁——`.part-open + h2{break-before:avoid}` 原被 H1 與 H2 之間的一枚
+      `<hr/>` 隔斷（選擇器要求相鄰兄弟），遂使每篇之首頁只印一行篇名；今去其 hr。
+    ②表圖之題——只給「緊接 <table> 之題」掛 .cap；舊法以 `blockquote > p:first-child`
+      一概而論，凡引文塊之首段近頁底即整塊推次頁，是為大段空白之源（實測 p53 空 352pt）。
+    """
+    h = io.open(bh.FINAL, encoding="utf-8").read()
+    n0 = h
+    n1 = h.count("</h1>" + chr(10) + "<hr />")
+    h = h.replace("</h1>" + chr(10) + "<hr />", "</h1>")
+    ls = h.split(chr(10))
+    ncap = 0
+    for i in range(1, len(ls)):
+        if (ls[i].lstrip().startswith("<table") and ls[i - 1].startswith("<p><strong>【")
+                and ls[i - 1].rstrip().endswith("</strong></p>")):
+            ls[i - 1] = '<p class="cap">' + ls[i - 1][3:]
+            ncap += 1
+    h = chr(10).join(ls)
+    if h != n0:
+        io.open(bh.FINAL, "w", encoding="utf-8").write(h)
+    print("  印前收緊：去篇後 hr %d 處・表圖之題掛 .cap %d 枚" % (n1, ncap))
+
+
 def build(cfg):
     src = os.path.join(ROOT, cfg["file"])
     if not os.path.isfile(src):
@@ -575,6 +599,7 @@ def build(cfg):
         b38.render_html(rows)
         bh.drop_hr_before_h1()
         bh.mark_part_pages()
+        pair_tighten()
         bh.pre_wide_span()
         b38.render_pdf()
 
