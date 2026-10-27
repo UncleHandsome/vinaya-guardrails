@@ -54,9 +54,10 @@ def merged_name(ed):
 
 
 def layout_pad(n1):
-    """卷一有 n1 頁時，隔頁之後是否須補一空白頁（使卷二自 recto 起）。
-    封面 1 頁＋卷一 n1 頁→隔頁落 2+n1（1-based）；為奇則落 recto，其後須補白，卷二方仍自 recto。"""
-    return 1 if (2 + n1) % 2 == 1 else 0
+    """卷一有 n1 頁時，隔頁之前是否須補一空白頁。
+    封面 1＋卷一 n1 → 隔頁之首落 0-based (1+n1)；隔頁須自 recto（1-based 奇）起，
+    故 (1+n1) 為奇時先補一白；隔頁占 recto＋verso 兩頁，卷二遂自次一 recto 起。"""
+    return 1 if (1 + n1) % 2 == 1 else 0
 
 
 def cjk_font(pg, kind="serif", tag="pf"):
@@ -662,16 +663,19 @@ def build(cfg):
 
 
 def divider_lines(a, b):
-    """合璧說明之文（兩卷頁數一律自算——宣稱須實測，不許手打）。"""
-    return [u"", u"", u"", u"雙 子 星 合 冊", u"", u"姊妹卷合璧說明", u"", u"──────", u"",
-            u"心法卷《起心動念：四分律的心智顯微鏡與唯識解剖》　%d 頁" % a,
-            u"法制卷《如法推尋：僧伽憲政、法權審理與修復正義》　%d 頁" % b, u"",
-            u"本冊係兩卷接排，兩卷頁碼各自為起訖：前卷 %d 至 %d，後卷 %d 至 %d。" % (1, a, 1, b),
-            u"兩冊之【全書標準總目錄】今由本管線之點線目錄生成器印出，**條條載頁碼**（頁碼自印成之冊反查回填，至收斂為止）；",
-        u"頁碼為各冊自身之絕對頁，故合冊之中兩冊頁碼各自起訖——跨冊檢索仍以書籤之層級與章節之號為準。",
-            u"跨卷之引（『《如法推尋》〔案例 NN〕』、『《起心動念》【案卷 NN】』之屬），",
-            u"依兩冊卷首凡例第七律『跨冊案號之索』——以號索於彼冊即可，勿以頁碼尋之。", u"",
-            u"另：兩卷各自之獨立檔（螢幕版・影印版）俱在，便於分卷誦讀與單卷印製。"]
+    """合璧說明之文（兩卷頁數自算）——**分作兩頁**：recto 立卷次與頁數，verso 陳讀法四則。
+    兩頁之制使「卷二自 recto 起」不必再補空白頁——舊法一頁隔頁＋一頁補白，
+    合冊遂恆有一整頁無字（螢幕閱讀極刺眼）。"""
+    p1 = [u"", u"", u"", u"雙 子 星 合 冊", u"", u"姊妹卷合璧說明", u"", u"──────", u"",
+          u"心法卷《起心動念：四分律的心智顯微鏡與唯識解剖》　%d 頁" % a,
+          u"法制卷《如法推尋：僧伽憲政、法權審理與修復正義》　%d 頁" % b, u"",
+          u"本冊係兩卷接排，兩卷頁碼各自為起訖：前卷 %d 至 %d，後卷 %d 至 %d。" % (1, a, 1, b)]
+    p2 = [u"", u"", u"", u"讀 法 四 則", u"", u"──────", u"",
+          u"一、兩冊之【全書標準總目錄】今由本管線之點線目錄生成器印出，條條載頁碼（頁碼自印成之冊反查回填，至收斂為止）；",
+          u"二、頁碼為各冊自身之絕對頁，故合冊之中兩冊頁碼各自起訖——跨冊檢索仍以書籤之層級與章節之號為準；",
+          u"三、跨卷之引（『《如法推尋》〔案例 NN〕』、『《起心動念》【案卷 NN】』之屬），依兩冊卷首凡例第七律『跨冊案號之索』——以號索於彼冊即可，勿以頁碼尋之；",
+          u"四、兩卷各自之獨立檔（螢幕版・影印版）俱在，便於分卷誦讀與單卷印製。"]
+    return p1, p2
 
 
 def draw_pair_cover(pg, sizes, edition):
@@ -764,20 +768,21 @@ def merge(parts, meta):
         extra = 0
         if i and div:
             w, h = s[0].rect.width, s[0].rect.height
-            # 落版（recto/verso）：封面在 recto（1-based 奇數），雙面印時卷二之封面亦須落 recto。
-            # 隔頁若不補白，卷二之起即隨卷一頁數之奇偶而漂——本波加一頁便現形（卷二封面落 p124＝verso）。
-            # 今自算：隔頁落 verso（1-based 偶），卷二自 recto 起；隔頁若將落 recto，先補一空白。
+            # 落版：隔頁自 recto 起、占 recto＋verso 兩頁；卷二遂自次一 recto 起，不必另補空白
+            # （舊法一頁隔頁＋一頁補白，合冊恆有一整頁無字）。
             if layout_pad(sizes[0]):
                 d.new_page(pno=d.page_count, width=w, height=h)
                 pad_i = d.page_count - 1
                 extra += 1
-            n = d.page_count
-            pg = d.new_page(pno=n, width=w, height=h)
-            pg.insert_textbox(pm.Rect(58, 92, w - 58, h - 74), chr(10).join(div),
-                              fontname=cjk_font(pg, "serif", "div"), fontsize=11.5, lineheight=1.62)
-            toc.append([1, u"合璧說明", n + 1])
-            div_i = n
-            extra += 1
+            div_i = d.page_count
+            for blk in div:
+                n = d.page_count
+                pg = d.new_page(pno=n, width=w, height=h)
+                pg.insert_textbox(pm.Rect(58, 92, w - 58, h - 74), chr(10).join(blk),
+                                  fontname=cjk_font(pg, "serif", "div"), fontsize=11.5,
+                                  lineheight=1.62)
+                extra += 1
+            toc.append([1, u"合璧說明", div_i + 1])
         if i:
             vol2_i = d.page_count
         d.insert_pdf(s)
@@ -788,8 +793,8 @@ def merge(parts, meta):
     d.set_metadata(meta)
     d.set_toc(toc)
     if vol2_i is not None:                            # 落版之自證：隔頁落 verso・卷二自 recto 起
-        if vol2_i % 2 != 0 or div_i % 2 != 1:
-            raise SystemExit(u"落版不合（隔頁 0-based %s・卷二 0-based %s；應 奇／偶）"
+        if vol2_i % 2 != 0 or div_i % 2 != 0:
+            raise SystemExit(u"落版不合（隔頁 0-based %s・卷二 0-based %s；俱應為偶（recto））"
                              % (div_i, vol2_i))
     # 邏輯頁碼標籤：兩卷各自起訖（合冊通編則檢視器之『第 50 頁』無從索，二卷之 50 頁相撞）。
     # 範圍：封面 1 頁・卷一・合璧說明 1 頁・卷二；號與頁腳所印者同形。

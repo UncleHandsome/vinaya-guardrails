@@ -176,11 +176,11 @@ for ed in ("螢幕版", "影印版"):
     for x in ds:
         x.close()
     pad = BP.layout_pad(nv[0])                   # 落版之補白（卷二須自 recto 起，見 build_pair）
-    exp_n = 2 + nv[0] + nv[1] + pad              # 封面 1＋卷一＋隔頁 1＋卷二甲補白
+    exp_n = 3 + nv[0] + nv[1] + pad              # 封面 1＋卷一＋隔頁 2（recto＋verso）＋卷二＋補白
     exp_t = tv[0] + tv[1] + 1                    # ＋隔頁之籤一條
     div_pg = 2 + nv[0] + pad                     # 1-based：封面 1・卷一 2..(1+nv0)・補白・隔頁
     pages = [fold(dm[i].get_text()) for i in range(nm)]
-    print("  甲 頁數 %d（自算 2＋%d＋%d＋補白 %d＝%d）・%d KB・書籤 %d 條（自算 %d＋%d＋1＝%d）"
+    print("  甲 頁數 %d（自算 3＋%d＋%d＋補白 %d＝%d）・%d KB・書籤 %d 條（自算 %d＋%d＋1＝%d）"
           % (nm, nv[0], nv[1], pad, exp_n, os.path.getsize(mrg) // 1024, len(toc),
              tv[0], tv[1], exp_t))
     if nm != exp_n:
@@ -207,13 +207,13 @@ for ed in ("螢幕版", "影印版"):
     if u"合璧說明" not in pages[div_pg - 1]:
         errs.append("合冊%s：自算之隔頁 p%d 不見『合璧說明』" % (ed, div_pg))
     # 落版（recto/verso）：卷二之首頁須為 1-based 奇（recto）；隔頁落 verso；補白頁須真空白。
-    vol2_pg = div_pg + 1
+    vol2_pg = div_pg + 2
     print("  庚 落版：隔頁 p%d（%s）・卷二起 p%d（%s）・補白 %s"
-          % (div_pg, u"verso ✓" if div_pg % 2 == 0 else u"recto ✗",
+          % (div_pg, u"recto ✓" if div_pg % 2 == 1 else u"verso ✗",
              vol2_pg, u"recto ✓" if vol2_pg % 2 == 1 else u"verso ✗",
              (u"p%d 空白 %s" % (div_pg - 1, u"✓" if not pages[div_pg - 2].strip() else u"✗")) if pad else u"無"))
-    if vol2_pg % 2 != 1 or div_pg % 2 != 0:
-        errs.append("合冊%s：落版不合（隔頁 p%d・卷二 p%d；應 隔頁 verso・卷二 recto）" % (ed, div_pg, vol2_pg))
+    if vol2_pg % 2 != 1 or div_pg % 2 != 1:
+        errs.append("合冊%s：落版不合（隔頁 p%d・卷二 p%d；應 隔頁 recto（占兩頁）・卷二 recto）" % (ed, div_pg, vol2_pg))
     if pad and pages[div_pg - 2].strip():
         errs.append("合冊%s：補白頁 p%d 非空白" % (ed, div_pg - 1))
 
