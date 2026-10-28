@@ -43,3 +43,38 @@ for k, (a, b, body, chp) in enumerate(blocks, 1):
         for j, s in enumerate(body):
             print("        | %3d %s（%d）" % (a + 1 + j, s, cw(s)))
         print("        +------------------------")
+
+# 號段無缺（第 83 輪立・外路第三十二報之線索）：圍欄之題若自宣「第A～B條」，則圖內諸號須覆 A..B。
+# 病源：第九章後半部矩陣宣「第46～90條」而漏第54條——摘要圖與案例之戶（案例七正是第54條）不一致。
+import re                                                      # noqa: E402
+miss_bad = []
+for k, (_a, _b, body, _chp) in enumerate(blocks, 1):
+    if not body:
+        continue
+    m = re.search(u"第(\\d{1,3})[～~\\-](\\d{1,3})條", body[0])
+    if not m:
+        continue
+    lo, hi = int(m.group(1)), int(m.group(2))
+    nums = set()
+    for s in body[1:]:
+        for r in re.finditer(u"(?<!\\d)(\\d{1,3})\\s*[～~\\-]\\s*(\\d{1,3})(?!\\d)", s):
+            nums.update(range(int(r.group(1)), int(r.group(2)) + 1))
+        for x in re.findall(u"(?<!\\d)(\\d{1,3})(?!\\d)", s):
+            nums.add(int(x))
+    gap = [n for n in range(lo, hi + 1) if n not in nums]
+    if gap:
+        miss_bad.append((k, lo, hi, gap))
+print("號段自宣而圖內缺號：%d 段" % len(miss_bad))
+for k, lo, hi, gap in miss_bad:
+    print("  ✗ 段%d｜宣第%d～%d條，缺 %s" % (k, lo, hi, u"、".join(str(x) for x in gap)))
+_pl = [u"【第1～5條之圖】", u"│  1 甲  2 乙  3 丙  5 戊"]
+_m = re.search(u"第(\\d{1,3})[～~\\-](\\d{1,3})條", _pl[0])
+_ns = set()
+for s in _pl[1:]:
+    for r in re.finditer(u"(?<!\\d)(\\d{1,3})\\s*[～~\\-]\\s*(\\d{1,3})(?!\\d)", s):
+        _ns.update(range(int(r.group(1)), int(r.group(2)) + 1))
+    for x in re.findall(u"(?<!\\d)(\\d{1,3})(?!\\d)", s):
+        _ns.add(int(x))
+_gap = [n for n in range(int(_m.group(1)), int(_m.group(2)) + 1) if n not in _ns]
+print("  號段之負測｜植缺 4 逮 %d（宜 1）" % len(_gap))
+sys.exit(1 if (miss_bad or len(_gap) != 1) else 0)

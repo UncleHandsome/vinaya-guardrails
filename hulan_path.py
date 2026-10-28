@@ -18,6 +18,28 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 PREFIX = "".join(chr(c) for c in (0x4F5B, 0x9640, 0x7684, 0x8B77, 0x6B04))
 GLOB_PAT = PREFIX + "*.txt"
 ARCHIVE = os.path.join(ROOT, "_archive", u"舊本")     # 舊 = U+820A（勿誤寫 U+8208「興」）
+# 備份之位址（2026-10-27 奉令「備份檔案另外找地方放」）：正本同層自此不留一支 .bak，
+# 俱入 `_archive/備份/護欄/`。『備份』之名就 `_archive` 現目錄中取（首字 U+5099），
+# 子庫之名則取本檔前綴之末二字（護欄 = U+8B77 U+6B04）——兩處皆不另立字面，免歸簡之災。
+
+
+def _bkroot():
+    arc = os.path.join(ROOT, "_archive")
+    for d in os.listdir(arc):
+        if os.path.isdir(os.path.join(arc, d)) and d[:1] == chr(0x5099):
+            return os.path.join(arc, d)
+    return os.path.join(arc, "".join(chr(c) for c in (0x5099, 0x4EFD)))
+
+
+BACKUP = os.path.join(_bkroot(), PREFIX[-2:])
+
+
+def bakpath(tag, src=None):
+    """本輪改前之備份檔路徑：`HP.bakpath("71b")` ➔ _archive/備份/護欄/〈正本名〉.txt.bak71b。
+    寫檔之器一律取此，不得再作 `BOOK + ".bakNN"`（那會把根目錄當垃圾場）。"""
+    if not os.path.isdir(BACKUP):
+        os.makedirs(BACKUP)
+    return os.path.join(BACKUP, os.path.basename(src or SRC) + ".bak" + tag)
 
 
 def detect():

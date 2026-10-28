@@ -10,6 +10,9 @@
      唯仍作合編之素材與逐字校據，故舊尺照跑），且該層恰有此檔一支
   丁 桌面他處之同名檔：與正本全等、或改動時間不早於正本者 → 須 0（此二類皆『兩份正本』之形；
     明顯較舊之殘稿只軟報列出，不判死——殘稿在作者自己目錄內，刪否非尺所裁）
+  戊 正本同層不得留備份檔（2026-10-27 奉令「備份檔案另外找地方放」）：備份一律取
+    `HP.bakpath(tag)` ➔ `_archive/備份/護欄/`，根目錄只該有一支正本
+    （另軟報舊刀檔仍作 `BOOK + ".bakNN"` 之數——一次性之器既已跑畢，不追改，唯重跑會髒根目錄）
 退出碼：任一不合格 1。
 用法：python -X utf8 _work/srccchk.py
 """
@@ -111,7 +114,28 @@ if desk:
 else:
     print(u"丁 找不到桌面目錄，此檢未行")
 
+n_e = 0
+stale = []
+for f in sorted(os.listdir(ROOT)):
+    if os.path.isfile(os.path.join(ROOT, f)) and u".bak" in f:
+        n_e += 1
+        stale.append(f)
+if n_e:
+    fails.append(u"戊 正本同層留 %d 枚備份檔（今制：俱入 `_archive/備份/%s`，取 HP.bakpath(tag)）：%s" % (
+        n_e, os.path.basename(HP.BACKUP), u"、".join(stale[:3])))
+print(u"戊 正本同層之備份：%d 枚（須 0）｜備份庫＝%s" % (n_e, os.path.relpath(HP.BACKUP, ROOT)))
+n_legacy = 0
+for fp in live_tools():
+    try:
+        s = io.open(fp, encoding="utf-8", errors="replace").read()
+    except Exception:
+        continue
+    if u"BOOK + u\".bak" in s or u"BOOK + \".bak" in s:
+        n_legacy += 1
+if n_legacy:
+    print(u"· 軟報 尚有 %d 支一次性之刀檔作 `BOOK + \".bakNN\"`（已跑畢之舊器，重跑會髒根目錄）" % n_legacy)
+
 for f in fails[:20]:
     print(u"  ✗ " + f)
-print(u"判：甲乙丁須 0、丙須真｜今 %s" % (u"合格" if not fails else u"不合格（%d 項）" % len(fails)))
+print(u"判：甲乙戊須 0、丁須 0、丙須真｜今 %s" % (u"合格" if not fails else u"不合格（%d 項）" % len(fails)))
 sys.exit(1 if fails else 0)

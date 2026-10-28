@@ -11,6 +11,7 @@ import io
 import os
 import re
 import sys
+import time
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,6 +22,21 @@ UNDO = u"--undo" in sys.argv
 REFRESH = u"--refresh" in sys.argv
 
 raw = io.open(BOOK, encoding="utf-8", newline=u"").read()
+RAW0 = io.open(BOOK, "rb").read()
+TAG = next((a.split(u"=", 1)[1] for a in sys.argv if a.startswith(u"--tag=")), u"apx" + time.strftime("%m%d%H%M"))
+
+
+def _write(new, note=u""):
+    """今制：正本一律二進位寫（67 輪之 `OSError Errno 22` 由文本寫而生），且寫前必備份於 `_archive/備份/護欄/`。"""
+    bk = HP.bakpath(TAG)
+    io.open(bk, "wb").write(RAW0)
+    io.open(BOOK, "wb").write(new.encode("utf-8"))
+    chk = io.open(BOOK, "rb").read().decode("utf-8")
+    print(u"%s已入書｜備份 %s｜回讀%s" % (note, os.path.relpath(bk, ROOT),
+                                    u"全等" if chk == new else u"不等!"))
+    assert chk == new, u"回讀不等，備份在 `_archive/備份/護欄/`"
+
+
 L = raw.split(u"\r\n")
 if UNDO or REFRESH:
     """撤除附錄：自「# 附錄」H1 至檔尾一併削去，並削其在目錄中所佔之兩行。
@@ -31,15 +47,17 @@ if UNDO or REFRESH:
     while a > 0 and not L[a - 1].strip():
         a -= 1
     toc = [i for i, l in enumerate(L[:a]) if l.lstrip().startswith(u"* **附錄　全戒本歷條總表")]
-    assert len(toc) <= 1, u"目錄之附錄項存 %d 處" % len(toc)     # 紙本目錄今不列附錄，零處乃常
-    out = [l for i, l in enumerate(L[:a]) if i not in set(toc)]
+    assert len(toc) <= 1, u"目錄之附錄項存 %d 處" % len(toc)     # 第 76 輪起：附錄入目錄，一条乃常
+    # 換版（--refresh）只換附錄之文，不削其目錄條；唯全撤（--undo）方連條一併削去，
+    # 否則目錄懸一虛指之條（大綱定位器另有字級門，不以目錄頁誤中，見 build_hulan.locate_headings）。
+    drop = set(toc) if UNDO else set()
+    out = [l for i, l in enumerate(L[:a]) if i not in drop]
     while out and not out[-1].strip():
         out.pop()
     if UNDO:
         new = u"\r\n".join(out) + u"\r\n"
         print(u"撤除：%d 行 → %d 行（-%d）｜CRLF %d" % (len(L), len(out), len(L) - len(out), new.count(u"\r\n")))
-        io.open(BOOK, "w", encoding="utf-8", newline=u"").write(new)
-        print(u"已撤除附錄")
+        _write(new, u"撤除後")
         sys.exit(0)
     L, raw = out, u"\r\n".join(out) + u"\r\n"
     print(u"換版：先削舊附錄，正文 %d 行" % len(L))
@@ -72,7 +90,6 @@ assert len(out) == len(L) + 1 + len(apx), u"行數增量不合"
 assert new.count(u"\r\n") == len(out) - 1 + (1 if tail else 0), u"CRLF 變形"
 print(u"附錄首兩行：%s ｜ %s" % (apx[0][:40], apx[6][:52]))
 if GO:
-    io.open(BOOK, "w", encoding="utf-8", newline=u"").write(new)
-    print(u"已入書")
+    _write(new)
 else:
     print(u"（覆核模式，未寫檔）")

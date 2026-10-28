@@ -28,7 +28,8 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 RULERS = ["srccchk", "hlchk", "ordchk", "refchk", "apxchk", "claimchk", "sigchk",
           "punctchk", "tocsync", "gapcensus", "simp_sweep", "starbal", "h4seq",
-          "hlface", "fence_audit", "exchkr", "case_inventory"]
+          "hlface", "fence_audit", "exchkr", "case_inventory", "tocnum", "hlannot",
+           "hlgrid", "hlfnode", "mapchk", "toccensus"]
 # 需外部參數（草稿檔／待檢檔／中介檔）者，跑批不跑，只入冊防漂移
 ARGV_ONLY = ["inschk", "hl_unseen", "fence_size", "hl_render", "draft_clean",
              "topic_audit"]

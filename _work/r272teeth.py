@@ -156,8 +156,8 @@ def p1():
 @plant(2)
 def p2():
     L = list(BASE)
-    i = find_line(lambda l, idx: l.startswith(u'### 〔調部深描 15〕'))
-    return L, repl(L, i, u'15〕', u'16〕'), u'深描 15→16（越序）'
+    i = find_line(lambda l, idx: l.startswith(u'### 〔調部專題 15〕'))
+    return L, repl(L, i, u'15〕', u'16〕'), u'專題 15→16（越序）'
 
 
 @plant(3)
@@ -180,8 +180,8 @@ def p4():
 def p5():
     L = list(BASE)
     i = prose()
-    L[i] += u'〔調部深描16〕'
-    return L, i, u'加無號之指針〔調部深描16〕'
+    L[i] += u'〔調部專題16〕'
+    return L, i, u'加無號之指針〔調部專題16〕'
 
 
 @plant(6)
@@ -295,8 +295,8 @@ def p18():
 @plant(19)
 def p19():
     L = list(BASE)
-    i = find_line(lambda l, idx: l.startswith(u'### 〔調部深描 11〕'))
-    return L, repl(L, i, u'### ', u'#### '), u'降一則深描為四級題（篇內少一則）'
+    i = find_line(lambda l, idx: l.startswith(u'### 〔調部專題 11〕'))
+    return L, repl(L, i, u'### ', u'#### '), u'降一則專題為四級題（篇內少一則）'
 
 
 @plant(20)
@@ -443,9 +443,35 @@ def p32c():
     return L, i, u'\u690d\u4e00\u6bb5\u4e94\u5341\u8a00\u7121\u6a1e\u9ede\u4e4b\u9010\u5b57\u5f15\u6587'
 
 
-PLANTS[37] = p32
+PLANTS[39] = p32
 PLANTS[24] = p24
-EXTRA = {37: [(u'32b', p32b)], 22: [(u'22b', p22b)]}
+EXTRA = {39: [(u'32b', p32b)], 22: [(u'22b', p22b)]}
+
+
+@plant(37)
+def p37name():
+    """288・款級名實之植：號存而名錯（奉裁 D6『杜絕指針有其號而引錯其名』之自動防線）。
+       靶＝〔調部專題 02』『第五章第五節第九款（與波羅夷戒）』——改掛他款之題『（物權返還先於受懺）』，
+       其四字實在第五節第六款，故指針之章・節・款三級俱存，唯掛名不實：目 2（章節指針）與 v39secref 俱不識，
+       唯第 37 目能紅（針尖單軸）。"""
+    L = list(BASE)
+    old = u'第五章第五節第九款（與波羅夷戒）'
+    idx = find_line(lambda l, i: old in l)
+    assert L[idx].count(old) == 1, u'37 植錨非一'
+    L[idx] = L[idx].replace(old, u'第五章第五節第九款（物權返還先於受懺）')
+    return L, idx, u'款級指針之掛名換作他款之題'
+
+
+@plant(38)
+def p38name():
+    """292・退位名制之植：把已改名之『略戒心印』貼回舊名『略戒憲綱』。
+       （舊名非錯字・非簡形・非黑話，歷尺俱不識——唯第 38 目能紅，針尖單軸。）"""
+    L = list(BASE)
+    old = u'三十二字略戒心印'
+    i = find_line(lambda l, idx: old in l)
+    assert L[i].count(old) == 1, u'38 植錨非一'
+    L[i] = L[i].replace(old, u'三十二字略戒' + chr(0x61B2) + chr(0x7DB1))
+    return L, i, u'舊名『憲綱』貼回一行（第 38 目之植）'
 
 
 @plant(36)

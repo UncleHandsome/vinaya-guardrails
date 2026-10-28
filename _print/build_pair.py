@@ -659,7 +659,41 @@ def build(cfg):
     if lost_spine:
         raise SystemExit("篇・章之書籤求不得頁（不造數、不靜默）：%s"
                          % u"、".join(x[:16] for x in lost_spine[:6]))
-    return pdf_out, n, len(outline), len(miss)
+    merge_pdf = pdf_out
+    if not SCREEN and cfg["key"] == "1":
+        # 合冊之封面占一頁，卷一遂落於**偶數**物理頁；而單行本之版心（內 18mm／外 10mm）
+        # 是照「頁 1 為 recto」排定的——直接接排，卷一整卷之版心便翻到外側，
+        # 跨隔頁時寬邊由左跳到右（卷一末寬左、卷二首寬右），裝訂後接縫對不上。
+        # 故另印一份「左右版心互換」者供合冊用：文字與頁數全同，唯版心翻面。
+        # 封面頁須補回零邊距——`@page :left/:right` 之特異性高於 `@page cover`，
+        # 不補則 210mm 之封面溢出版心，瀏覽器縮印全冊（實測 116 頁➔96 頁）。
+        flip_html = os.path.join(HERE, "final_pair1_flip.html")
+        merge_pdf = os.path.join(HERE, "pair1_merge.pdf")
+        h = io.open(final, encoding="utf-8").read()
+        flip = ("<style>\n/* 合冊用：版心互換；封面頁仍零邊距 */\n"
+                "@page :left { margin-left: 10mm; margin-right: 18mm; }\n"
+                "@page :right { margin-left: 18mm; margin-right: 10mm; }\n"
+                "@page cover { margin: 0; }\n</style>")
+        io.open(flip_html, "w", encoding="utf-8").write(h.replace("</head>", flip + "</head>", 1))
+        keep = (b38.FINAL, b38.PDF)
+        b38.FINAL, b38.PDF = flip_html, merge_pdf
+        try:
+            b38.render_pdf()
+        finally:
+            b38.FINAL, b38.PDF = keep
+        b38.stamp_pdf(merge_pdf, outline, meta)
+        df = pm.open(merge_pdf)
+        nf = df.page_count
+        df.close()
+        if nf != npage:
+            raise SystemExit(u"合冊用卷一頁數不合（%d／%d）——版心互換不得動排" % (nf, npage))
+        print("  合冊用卷一：%s（版心互換・%d 頁・與單行本同文）"
+              % (os.path.basename(merge_pdf), nf))
+    return pdf_out, n, len(outline), len(miss), merge_pdf
+
+
+def _volname(c):
+    return c["vol_cn"].replace(" ", "")
 
 
 def divider_lines(a, b):
@@ -667,8 +701,8 @@ def divider_lines(a, b):
     兩頁之制使「卷二自 recto 起」不必再補空白頁——舊法一頁隔頁＋一頁補白，
     合冊遂恆有一整頁無字（螢幕閱讀極刺眼）。"""
     p1 = [u"", u"", u"", u"雙 子 星 合 冊", u"", u"姊妹卷合璧說明", u"", u"──────", u"",
-          u"心法卷《起心動念：四分律的心智顯微鏡與唯識解剖》　%d 頁" % a,
-          u"法制卷《如法推尋：僧伽憲政、法權審理與修復正義》　%d 頁" % b, u"",
+          u"%s《%s：%s》　%d 頁" % (_volname(BOOKS[0]), BOOKS[0]["short"], BOOKS[0]["subtitle"], a),
+          u"%s《%s：%s》　%d 頁" % (_volname(BOOKS[1]), BOOKS[1]["short"], BOOKS[1]["subtitle"], b), u"",
           u"本冊係兩卷接排，兩卷頁碼各自為起訖：前卷 %d 至 %d，後卷 %d 至 %d。" % (1, a, 1, b)]
     p2 = [u"", u"", u"", u"讀 法 四 則", u"", u"──────", u"",
           u"一、兩冊之【全書標準總目錄】今由本管線之點線目錄生成器印出，條條載頁碼（頁碼自印成之冊反查回填，至收斂為止）；",
@@ -713,15 +747,14 @@ def draw_pair_cover(pg, sizes, edition):
         pg.insert_textbox(pm.Rect(x0 - 14, top + box + 5, x0 + box + 14, top + box + 24), cap,
                           fontname=fs, fontsize=9.0, color=(0.2, 0.2, 0.2), align=1)
     y = h * 0.475
-    for i, (nm, sub) in enumerate((
-            (u"起心動念", u"四分律的心智顯微鏡與唯識解剖"),
-            (u"如法推尋", u"僧伽憲政、法權審理與修復正義"))):
+    for i, (nm, sub) in enumerate([(b["short"], b["subtitle"]) for b in BOOKS]):
         cen(y, 16, u"《%s》　%d 頁" % (nm, sizes[i]), font=fs)
         cen(y + 21, 10.5, sub, font=fh)
         y += 56
     pg.draw_line(pm.Point(w / 2 - 62, y - 12), pm.Point(w / 2 + 62, y - 12),
                  color=(0, 0, 0), width=1.1)
-    cen(y + 14, 11, u"心法卷為修己之鏡　法制卷為立憲之柱　一體兩翼，名同位異", font=fh)
+    cen(y + 14, 11, u"%s為修己之鏡　%s為立憲之柱　一體兩翼，名同位異"
+        % (_volname(BOOKS[0]), _volname(BOOKS[1])), font=fh)
     for k, line in enumerate((
             u"本冊係兩卷接排：卷一 %d 頁在前，卷二 %d 頁在後。" % (sizes[0], sizes[1]),
             u"兩卷頁碼各自為起訖（見卷間『合璧說明』），跨冊之引依凡例第七律以號索之。",
@@ -832,7 +865,7 @@ def main():
     if DRY:
         return
     print("\n" + "=" * 72)
-    for p, n, o, m in got:
+    for p, n, o, m, _mp in got:
         print("✓ %s｜%d 頁｜書籤 %d 條｜未定位 %d" % (os.path.basename(p), n, o, m))
     if len(got) == len(BOOKS):
         meta = {"title": u"雙子星合冊｜起心動念（心法卷）＋如法推尋（法制卷）｜%s" % TAGL,
@@ -840,7 +873,7 @@ def main():
                 "keywords": u"四分律；毘奈耶；心所；羯磨；大正藏 No.1428",
                 "creator": u"build_pair 管線（沿用 build38 之法源）", "producer": u"build_pair",
                 "_out": merged_name(TAGL)}
-        merged, mn, mtoc = merge([g[0] for g in got], meta)
+        merged, mn, mtoc = merge([g[4] for g in got], meta)
         print("✓ %s｜%d 頁・書籤接排 %d 條" % (os.path.basename(merged), mn, mtoc))
 
 

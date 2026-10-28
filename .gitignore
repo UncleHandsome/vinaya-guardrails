@@ -35,3 +35,6 @@ Thumbs.db
 desktop.ini
 .DS_Store
 *.tmp
+# 執行日誌與輸出（每輪可重生）
+_work/*.log
+_work/*.out

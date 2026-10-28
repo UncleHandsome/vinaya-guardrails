@@ -2,7 +2,7 @@
 """ver39 雙版建置（承 build38.py 全套流程，來源改 ver39 修正版／第三十九版）
 
 【ver39 之異於 ver38 者（升版當輪記）】
-  一、附錄已改名并收為六篇（附錄一～附錄六，『十五則深描』分上・下兩篇 H1），
+  一、附錄已改名并收為六篇（附錄一～附錄六，『十五則專題』分上・下兩篇 H1），
       編纂底冊四篇仍不入主檔；『終卷』自第 286 輪奉令隨冊印（前制不印，致全章缺於冊）。
   二、正文八章（原第九章升格為第八章），第七章與第八章各分（上）（下）兩 H1。
   三、精簡本之削塊名單係對 ver38 字面而設，ver39 未立新制——run slim 即擲回，
@@ -81,12 +81,12 @@ def book_meta():
     import sys as _s; _s.path.insert(0, os.path.join(os.path.dirname(HERE), "_work"))
     import _casedef as _CD            # 276：案號定義共器（第六章改製，卡節已亡）
     cases = len(_CD.case_defs(t.splitlines()))
-    buyi = len(re.findall(u"(?m)^### 〔調部深描 \\d+〕", t))
+    buyi = len(re.findall(u"(?m)^### 〔調部專題 \\d+〕", t))
     gates = len(set(re.findall(u"(?m)^### 閘門([一二三四五六])", t)))
     axioms = len(set(re.findall(u"正理([一二三四五六七八])：", t)))
-    for k, v in ((u"章", ch), (u"案例卡", cases), (u"深描", buyi), (u"閘門", gates), (u"正理", axioms)):
+    for k, v in ((u"章", ch), (u"案例卡", cases), (u"專題", buyi), (u"閘門", gates), (u"正理", axioms)):
         assert v > 0, u"封面之數算得 %r＝0，源檔形制已變，須先改此器再出冊" % k
-    return (u"%s章·%d 則判例·%d 則深描·%d 重心智閘門·%d 大正理"
+    return (u"%s章·%d 則判例·%d 則專題·%d 重心智閘門·%d 大正理"
             % (CN_DIG.get(ch, ch), cases, buyi, gates, axioms))
 
 # ── 封面（簡約風）：無框、大留白、一線分隔 ──────────────────────
@@ -854,7 +854,7 @@ def nowrap_case_ids(html):
 
     只動 pre／code 以外之文字節點，免亂 ASCII 圖之欄對齊。"""
     parts = re.split(r"(?s)(<pre.*?</pre>|<code.*?</code>)", html)
-    idre = re.compile(u"[〔](遮|開|僧|遺|補遺|調部深描 ?)([0-9]{1,3})[〕]")
+    idre = re.compile(u"[〔](遮|開|僧|遺|補遺|調部專題 ?)([0-9]{1,3})[〕]")
     n = 0
     for i in range(0, len(parts), 2):
         seg = parts[i]

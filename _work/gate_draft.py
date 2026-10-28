@@ -93,6 +93,8 @@ for _f in glob.glob(os.path.join(ROOT, "原文", "*.txt")):
     CORP |= set(io.open(_f, encoding="utf-8", errors="ignore").read())
 RISKY = {c for c in SIM if c in CORP}
 qsp = [(m.start(), m.end()) for m in re.finditer(u"「[^」]*」|『[^』]*』|\\[[^\\]\\n]{1,14}\\]", t)]
+import lane  # noqa: E402  律文欄（條文／律制）之保護區與全書尺 simp_sweep 同源，勿兩處各開口徑
+qsp += lane.spans(t)[0]
 inq = lambda k: any(a <= k < b for a, b in qsp)
 pos = 0
 for i, ln in enumerate(t.split("\n"), 1):

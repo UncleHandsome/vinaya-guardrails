@@ -9,6 +9,10 @@
   戊 文字層逐條回驗：錨自動取自本式送排之中介 md 的所有自報逐字引文（千餘條），
     應見者俱見於印面；應無之形俱零（markdown 殘相、未閉星號、舊誤句、$ math 殘形）。
     跨頁之句須先擲去每頁首尾之純頁碼行，否則正常跨頁即被報成漏印。
+  己 附錄歷號之形：源檔三位數以上之號（100.～178.）須在印面文字層如實現形，
+    且印面不得有『字母代數字』之號（外路第廿七報稱舊版印作 L00.～L78.；今產物自證 0）。
+  庚 頁眉：以冊內大綱推每頁應有之眉（陽頁章題・陰頁書名・開章之頁與卷首則應無），
+    再取字層上緣之實字校之；四判（缺・誤・多・合）各植負測點名，管轄與陽頁之數同印。
 軟報（只列不判）：細字級分布、孤懸標題、近空頁。
 
 用法：python _print/verify_hulan.py [PDF 路徑]
@@ -26,6 +30,7 @@ sys.path.insert(0, HERE)
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import build_hulan as BH                                  # noqa: E402  同源之標題口徑
+import hulan_head as HH                                   # noqa: E402  同一上緣之門・同一摺空白
 
 PDF = sys.argv[1] if len(sys.argv) > 1 else BH.PDF_OUT
 SRC = BH.SRC
@@ -80,14 +85,25 @@ for l in src_lines:
         cur.append(l)
 
 def page_body(doc, i):
-    """取一頁之正文串接：擲去頁眉／頁腳之純頁碼行。
-    不擲則引文一跨頁，串接中便夾入下頁頁碼（實測 p34『從今日沙門、』下接 p35『35婆羅門』），
-    尺將把正常跨頁之句報成漏印。"""
+    """取一頁之正文串接：擲去頁腳／頁眉之純頁碼行，再擲頁眉一句（第 78 輪起，眉由 hulan_head
+    蓋於上緣 y<NEED 之帶）。不擲則引文一跨頁，串接中便夾入下頁頁碼（實測 p34『從今日沙門、』
+    下接 p35『35婆羅門』）或下頁之眉題，尺將把正常跨頁之句報成漏印。
+    眉之形自帶內之字求（幾何），其削則於行列中求同形之第一行——不假設文字之來序
+    （實測：蓋入之眉附於內容流之尾，get_text() 仍以頁碼為首行，故『削首行』之法在此全錯）。"""
     L = [x.strip() for x in doc[i].get_text().split(u"\n") if x.strip()]
     if L and re.fullmatch(u"\\d{1,3}", L[0]):
         L = L[1:]
     if L and re.fullmatch(u"\\d{1,3}", L[-1]):
         L = L[:-1]
+    _h = norm(u"".join(s["text"] for b in doc[i].get_text("dict")["blocks"]
+                       for ln in b.get("lines", []) for s in ln["spans"]
+                       if s["bbox"][1] < HH.NEED))
+    if _h:
+        j = next((k for k, x in enumerate(L) if norm(x) == _h), None)
+        if j is None:
+            raise SystemExit(u"頁眉無從削（p%d｜眉『%s』・行首『%s』・行尾『%s』）——須查 hulan_head 之形制"
+                             % (i + 1, _h[:18], (L[0] if L else u"")[:16], (L[-1] if L else u"")[:16]))
+        L = L[:j] + L[j + 1:]
     return norm(u"".join(L))
 
 
@@ -121,7 +137,16 @@ def blocks_sorted(i):
     return sorted(bs, key=lambda b: (round(b[1], 1), b[0]))
 
 
-firsts = [norm(blocks_sorted(i)[0][4]) if blocks_sorted(i) else u"" for i in range(np_)]
+# 「居頁首」之判只看有內容之塊：纯饰线之塊（─｜—·框線字符）非文，若以之為首塊，
+# 則章前那條 HR 落上頁末或本頁首皆會引虛報（第 74 輪第十章即此：印面首塊為「—」飾線，其下即篇題）。
+DECOR = re.compile(u"^[\\s\\u2500-\\u25FF\\u2014\\u2013\\u00B7\\u2022\\u3000\\-—–·．.]+$")
+
+
+def real_blocks(i):
+    return [b for b in blocks_sorted(i) if not DECOR.match(b[4])]
+
+
+firsts = [norm(real_blocks(i)[0][4]) if real_blocks(i) else u"" for i in range(np_)]
 PART = re.compile(u"^【(?:第[一二三四五]部：|卷首·扉頁)")   # 部Banner 得居頁首，其下即該部之首篇
 
 
@@ -132,7 +157,7 @@ def page_tops(key):
             out.append(i)
             continue
         if PART.search(firsts[i]):
-            bs = blocks_sorted(i)
+            bs = real_blocks(i)
             if len(bs) > 1 and key in norm(bs[1][4]):
                 out.append(i)
     return out
@@ -175,7 +200,9 @@ bad_pre = 0
 for a, b in zip(pre_first, pre_last):
     ka, kb = norm(a)[:10], norm(b)[:10]
     ia = next((i for i in range(np_) if ka in pages[i]), None)
-    ib = next((i for i in range(np_ - 1, -1, -1) if kb in pages[i]), None)
+    # 末行須自『首行所見之頁』起往後找——舊法由末頁倒數，遇他處重出之句（如『展轉取最下鉢…』
+    # 亦見於本章散文）即錯配他頁，假報腰斬（第 74 輪兩報俱此，正本實未跨頁）。
+    ib = None if ia is None else next((i for i in range(ia, np_) if kb in pages[i]), None)
     if ia is None or ib is None:
         bad_pre += 1
         print(u"  圍欄行佚：首=%s｜末=%s" % (ka[:8], kb[:8]))
@@ -209,19 +236,43 @@ print(u"  抽驗：應見 %d 條（結構 %d＋逐字錨 %d，亦見附錄者 %d
       % (len(STRUCT) + len(AUTO), len(STRUCT), len(AUTO), n_apx, len(miss), len(NOT), len(ghost),
          u"隨冊" if has_apx else u"不印"))
 
+
+def np_lost(src_chars, print_text):
+    """源有而印面無之內非 BMP 字（U+10000 以上）——無伴字體時此類字於 Chromium 列印『連字帶形』
+    一併消失（第 78 輪 Ext-B 之測），文字層亦抽不回，故歷波全綠而冊上實缺。判式抽出方可植負測。"""
+    return [c for c in src_chars if c not in print_text]
+
+
+_np_src = sorted({c for c in u"\n".join(src_lines) if ord(c) >= 0x10000})
+_np_lost = np_lost(_np_src, whole)
+_np_plant = np_lost([u"\U00027655"], whole)
+print(u"  戊4・非 BMP 之字：源 %d 枚・印面佚 %d 枚｜負測植 U+27655 逮 %d（宜 1）"
+      % (len(_np_src), len(_np_lost), len(_np_plant)))
+if _np_lost:
+    fail.append(u"【戊4】印面佚非 BMP 之字 %d 枚：%s" % (
+        len(_np_lost), u"、".join(u"%s(U+%X)" % (c, ord(c)) for c in _np_lost[:8])))
+if len(_np_plant) != 1:
+    fail.append(u"【戊5】非 BMP 之負測不響：植一枚而逮 %d（宜 1）" % len(_np_plant))
+
 # 軟報——字級分布、孤懸標題、近空頁
-sizes = {}
+# 字級分兩欄記：頁眉帶（y<NEED，第 78 輪起為 hulan_head 所蓋之 8.6pt）與帶外之正文・圍欄。
+# 混為一談則『細字』之數陡增而病無一——宣稱之單位須與被量者同域（第 61 輪之誡）。
+sizes, hsize = {}, {}
 for i in range(np_):
     for b in doc[i].get_text("dict")["blocks"]:
         for ln in b.get("lines", []):
             for sp in ln.get("spans", []):
                 if sp["text"].strip():
-                    sizes.setdefault(round(sp["size"], 2), 0)
-                    sizes[round(sp["size"], 2)] += len(sp["text"])
+                    d = hsize if sp["bbox"][1] < HH.NEED else sizes
+                    d.setdefault(round(sp["size"], 2), 0)
+                    d[round(sp["size"], 2)] += len(sp["text"])
 top = sorted(sizes.items())
 print(u"  字級分布（最細五級）：%s" % u"、".join(u"%spt×%d字" % (s, n) for s, n in top[:5]))
 tiny = sum(n for s, n in top if s < 9.0)
-print(u"  細於 9.0pt 之字數：%d%s" % (tiny, u"（圍欄圖層，屬第 3 期候裁）" if tiny else u""))
+n_head = sum(hsize.values())
+print(u"  細於 9.0pt 之字數：%d%s｜頁眉帶另 %d 字（%s，裝幀之制，非病）" % (
+    tiny, u"（圍欄圖層，屬第 3 期候裁）" if tiny else u"", n_head,
+    u"・".join(u"%spt" % s for s in sorted(hsize))))
 widow = 0
 for i in range(np_):
     bs = blocks_sorted(i)
@@ -254,6 +305,101 @@ print(u"  尾白>250pt 之頁：%d 處" % len(gaps))
 for i, g, kind in sorted(gaps, key=lambda r: -r[1]):
     print(u"    p%-4d 空%-6.0f｜%s" % (i, g, kind))
 
+# ── 己・附錄歷號不得為字母（外路第廿七報稱舊版印作『L00.』～『L78.』——今產物以文字層自證，並防此類復發）
+rawwhole = u"\n".join(doc[i].get_text() for i in range(np_))
+if u"全戒本歷條總表" in whole:                       # 削附錄之式（精簡版）不校此行
+    want = sorted({int(m.group(1)) for l in src_lines for m in [re.match(u"^(\\d+)\\.\\s", l)] if m
+                   if int(m.group(1)) >= 100})
+    lost = [n for n in want if not re.search(u"(?m)^%d\\. " % n, rawwhole)]
+    alpha = re.findall(u"(?m)^[A-Z]\\d{1,2}\\. ", rawwhole)
+    print(u"  己・附錄三位數以上歷號 %d 枚｜印面缺 %d｜字母誤植行 %d" % (len(want), len(lost), len(alpha)))
+    if lost:
+        fail.append(u"【己1】印面查無歷號 %d 枚：%s" % (len(lost), u"、".join(str(n) for n in lost[:10])))
+    if alpha:
+        fail.append(u"【己2】印面歷號以字母代數字 %d 處：%s" % (len(alpha), u"、".join(alpha[:8])))
+    # 負測：植兩枚已知之病形，須被同一對樣式逮住（尺不響即啞，啞非綠）
+    fix = u"L00. 「若比丘尼往觀王宮」\n101. 「若比丘尼露身形」\n"
+    n_alpha = len(re.findall(u"(?m)^[A-Z]\\d{1,2}\\. ", fix))
+    n_lost = len([v for v in (100, 101) if not re.search(u"(?m)^%d\\. " % v, fix)])
+    print(u"  己之負測｜植 L00. 逮 %d（宜 1）｜植佚 100. 逮 %d（宜 1）" % (n_alpha, n_lost))
+    if n_alpha != 1 or n_lost != 1:
+        fail.append(u"【己3】自身負測不響：字母 %d・佚號 %d" % (n_alpha, n_lost))
+
+# ── 庚・頁眉（第 78 輪之裝幀案：Chromium 不生效於 running elements，眉由 _print/hulan_head.py
+#     蓋於產物層，故此目不問源檔、只問冊——以大綱（冊內另一法源）推每頁『應有之眉』，
+#     再取字層上緣（y < 蓋印器之門限）之實有文字校之。開章之頁與卷首・目錄例不蓋，此處校其必無。）
+def head_judge(exp, got):
+    """頁眉之判式（抽出方可植負測）：應有而無＝缺・應有而是他題＝誤・應無而有＝多・餘者＝合。"""
+    e, g = HH.fold(exp), HH.fold(got)
+    if not e and not g:
+        return u"合"
+    if e and not g:
+        return u"缺"
+    if not e and g:
+        return u"多"
+    return u"合" if e == g else u"誤"
+
+
+_pairs = [(ti, pg) for lv, ti, pg in doc.get_toc()
+          if lv == 1 and BH.HEAD_H1.match(ti)]
+if not _pairs:
+    fail.append(u"【庚0】大綱內無章級之題（第[一二三…]章・十線地圖・附錄）——頁眉之尺無靶，不成其為尺")
+else:
+    _pairs.sort(key=lambda r: r[1])
+    _first = _pairs[0][1]
+    _opens = {pg for _t, pg in _pairs}
+    _k, _n = -1, 0
+    _miss, _wrong, _extra, _recto = [], [], [], 0
+    for _i in range(_first - 1, np_):
+        _p = _i + 1
+        while _k + 1 < len(_pairs) and _pairs[_k + 1][1] <= _p:
+            _k += 1
+        if _p in _opens:
+            _exp = u""                                   # 開章之頁不重覆其題（成例）
+        elif _p % 2 == 0:
+            _exp = BH.BOOK_TITLE
+        else:
+            _exp = _pairs[_k][0]
+            _recto += 1
+        _got = HH.fold(u"".join(s["text"]
+                                for b in doc[_i].get_text("dict")["blocks"]
+                                for ln in b.get("lines", []) for s in ln["spans"]
+                                if s["bbox"][1] < HH.NEED))
+        _v = head_judge(_exp, _got)
+        if _exp or _got:
+            _n += 1                           # 管轄：有期望或有實字之頁，俱入尺目（合者亦計）
+        if _v == u"合":
+            continue
+        {"缺": _miss, "誤": _wrong, "多": _extra}[_v].append((_p, _exp[:14], _got[:14]))
+    print(u"  庚・頁眉｜大綱章級 %d 條・正文起 p%d・管轄 %d 頁（陽頁 %d）・校 %d 頁・應蓋而無 %d・題不合 %d・應無而蓋 %d"
+          % (len(_pairs), _first, np_ - _first + 1, _recto, _n, len(_miss), len(_wrong), len(_extra)))
+    for _nm, _lst in ((u"題不合", _wrong), (u"應無而蓋", _extra)):
+        if _lst:
+            print(u"    %s %d 頁，首三：%s" % (
+                _nm, len(_lst), u"、".join(u"p%d宜『%s』實『%s』" % r for r in _lst[:3])))
+    if _n < 100 or _recto < 20:
+        fail.append(u"【庚1】此尺不響：校 %d 頁（宜 ≥100）、陽頁 %d（宜 ≥20）——綠亦無憑"
+                    % (_n, _recto))
+    if _miss:
+        fail.append(u"【庚2】應有頁眉而無 %d 頁：%s" % (
+            len(_miss), u"、".join(str(r[0]) for r in _miss[:10])))
+    if _wrong:
+        fail.append(u"【庚3】頁眉之題與大綱所指之章不合 %d 頁：%s" % (
+            len(_wrong), u"、".join(str(r[0]) for r in _wrong[:10])))
+    if _extra:
+        fail.append(u"【庚4】開章之頁或卷首不應有眉而現有 %d 頁：%s" % (
+            len(_extra), u"、".join(str(r[0]) for r in _extra[:10])))
+    # 負測：四判各植一例，判式須點名真答案（器不響即啞，啞非綠）
+    _plant = [(u"第二章 正統律學", u"", u"缺"),
+              (u"第二章 正統律學", u"第三章 城郭宮殿之喻", u"誤"),
+              (u"", BH.BOOK_TITLE, u"多"),
+              (BH.BOOK_TITLE, BH.BOOK_TITLE, u"合")]
+    _deaf = [u"宜%s實%s" % (w, head_judge(e, g)) for e, g, w in _plant
+             if head_judge(e, g) != w]
+    print(u"  庚之負測｜四判 %s" % (u"、".join(_deaf) if _deaf else u"俱點名（缺・誤・多・合）"))
+    if _deaf:
+        fail.append(u"【庚5】判式自身不響：%s" % u"、".join(_deaf))
+
 doc.close()
 print(u"=" * 62)
 if fail:
@@ -261,4 +407,4 @@ if fail:
     for f in fail:
         print(u"  ✗ " + f)
     sys.exit(1)
-print(u"合格：甲乙丙丁戊五檢俱中（軟報不計）")
+print(u"合格：甲乙丙丁戊己庚七檢俱中（軟報不計）")

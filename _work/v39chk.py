@@ -99,8 +99,8 @@ def in_page(i):
     return not (Toc0 <= i < BODY0) and not (END <= i < ENDN)
 
 
-# ── 1・2：案號與深描之編序（案號定義之唯一法源＝`_CD.case_defs`，276 第六章改製後有四形載體；
-#          285 奉裁：附錄六自〔補遺 29〜44（除 36）〕轉正為〔調部深描 01〜15〕，編序自此連貫無缺號）
+# ── 1・2：案號與專題之編序（案號定義之唯一法源＝`_CD.case_defs`，276 第六章改製後有四形載體；
+#          285 奉裁：附錄六自〔補遺 29〜44（除 36）〕轉正為〔調部專題 01〜15〕，編序自此連貫無缺號；292 奉第七報刀口四，此名自『深描』改『專題』）
 DEFN = CD.case_defs(LINES)
 nums = sorted(DEFN)
 chk(u'案例編號連貫', [] if nums == list(range(1, len(nums) + 1)) else [u'%d 枚不連貫' % len(nums)],
@@ -109,8 +109,8 @@ chk(u'案例編號連貫', [] if nums == list(range(1, len(nums) + 1)) else [u'%
         sum(1 for v in DEFN.values() if v[u'形'] == u'地標列'),
         sum(1 for v in DEFN.values() if v[u'形'] == u'標題'),
         sum(1 for v in DEFN.values() if v[u'形'] == u'卡')))
-buyi = [int(m.group(1)) for m in re.finditer(u'(?m)^### 〔調部深描 (\\d+)〕', F)]
-chk(u'深描編序（01〜15 連貫）',
+buyi = [int(m.group(1)) for m in re.finditer(u'(?m)^### 〔調部專題 (\\d+)〕', F)]
+chk(u'專題編序（01〜15 連貫）',
     [] if sorted(buyi) == list(range(1, 16)) else [u'%s' % sorted(buyi)],
     u'今 %d 枚' % len(buyi))
 # ── 3・案之載體（旧目『每卡六欄』：276 量得卡形定義 0 枚，該分支空轉，故連卡題・六欄・導航之舊循環俱刪）
@@ -131,8 +131,8 @@ chk(u'案之載體（有名・地標有導航・案號可追溯）', bad2)
 cardset = set(nums)
 dead = sorted({int(m.group(1)) for m in re.finditer(u'〔案例 ?(\\d{1,3})〕', F)} - cardset)
 chk(u'案例指針可達', [(u'指向無此卡：%s' % d,) for d in dead])
-dead2 = sorted({int(m.group(1)) for m in re.finditer(u'〔調部深描 ?(\\d+)〕', F)} - set(buyi))
-chk(u'深描指針可達', [(u'指向無此卡：%s' % d,) for d in dead2])
+dead2 = sorted({int(m.group(1)) for m in re.finditer(u'〔調部專題 ?(\\d+)〕', F)} - set(buyi))
+chk(u'專題指針可達', [(u'指向無此卡：%s' % d,) for d in dead2])
 
 # ── 4：分批提示與舊帳
 PROMPT = [u'交付完畢', u'下回預告', u'共十二回', u'次對話', u'隨時準備接續推進', u'本回',
@@ -243,7 +243,7 @@ chk(u'章節指針可達（章級與節級，含蒙上省寫）', sorted(set(bad
     u'章 %d・節表 %d 章・省寫 %d 處' % (nch, len(secs), ELLIP))
 
 # ── 12：自報之數可校
-CLAIM = [(u'案例卡數', len(nums), 102), (u'深描則數', len(buyi), 15),
+CLAIM = [(u'案例卡數', len(nums), 102), (u'專題則數', len(buyi), 15),
          (u'章數', nch, 8), (u'閘門數', len(set(re.findall(u'### 閘門([一二三四五六])', F))), 6),
          (u'正理數', len(set(re.findall(u'正理([一二三四五六七八])：', F))), 8)]
 bad = [(u'%s：實 %d 宣 %d' % (n, a, b),) for n, a, b in CLAIM if a != b]
@@ -363,14 +363,14 @@ try:
     for n, v in DEFN.items():                                 # 276・定義載體皆入名冊（卡亡而案仍在）
         TIT[(u'案例', u'%02d' % n)] = re.split(u'—|--|：', v[u'名'])[0]
     for l in LINES:
-        mm = re.match(u'^### 〔(案例|調部深描) ([0-9]+)〕(.*)$', l)
+        mm = re.match(u'^### 〔(案例|調部專題) ([0-9]+)〕(.*)$', l)
         if mm:
             TIT[(mm.group(1), mm.group(2))] = re.split(u'—|--|：', mm.group(3))[0]
     bad = []
     for i, l in enumerate(LINES):
         if not in_print(i) or l.startswith(u'### '):
             continue
-        for m2 in re.finditer(u'〔(案例|調部深描) ?([0-9]+)〕([一-鿿]{3,14})', l):
+        for m2 in re.finditer(u'〔(案例|調部專題) ?([0-9]+)〕([一-鿿]{3,14})', l):
             ckey = (m2.group(1), m2.group(2).zfill(2))     # 275：舊名 key 會遮蔽第 9 目之同名正則器，故改稱
             head = TIT.get(ckey)
             if not head:
@@ -394,7 +394,7 @@ except Exception as e:                                        # 尺不得以崩�
 #   則全書每一處案例指稱自動歸 27 目之管。形制禁令＝把人工覆核換成機器可驗之約。
 #   例外：〔案例 J-3〕之字母式乃『現代深水案例』之別一命名空間（非第六章卡），不在此禁。
 try:
-    NOREF = re.compile(u'〔(?:案例|調部深描)·|〔(?:案例|調部深描)〕|〔(?:案例|調部深描)\\s+〔')
+    NOREF = re.compile(u'〔(?:案例|調部專題)·|〔(?:案例|調部專題)〕|〔(?:案例|調部專題)\\s+〔')
     bad = [(i + 1, NOREF.search(l).group(0)) for i, l in enumerate(LINES)
            if in_page(i) for m in [NOREF.search(l)] if m]
     chk(u'案例指針必帶號（無號『〔案例·名〕』形制歸零）', bad)
@@ -592,7 +592,123 @@ try:
 except Exception as e:
     chk(u'章級 H1 一章一條（全書八章）', [(u'尺自身出錯：%s' % e,)])
 
-# ── 37：尺亦須被尺量（第 272 輪・『不變量 N/N』之 N 自身即宣稱；275 順移 32，282 順移 34，284 順移 36，285 順移為 37）
+# ── 37：款級指針之名實對合（第 288 輪・奉作者裁 D6『杜絕指針有其號而引錯其名』）
+#   口徑：只校**絕對式三級指針**『第A章第B節第C款』——① 該款須實存（H4『#### C、題』形）；
+#         ② 指針後四十字內若掛名（（…）或 ・… 之描述語，頭四字），其名須見於所靶款之款題或其下四十行，
+#            俱不得見即紅，並印**該款實題**（負測之判式須點名真答案，非只報錯）。
+#   不校：蒙上省寫（本節／前款／本章）——其職在『相對指針不越界』；二級指針之存在——其職在 v39secref；
+#         『款一至八』之歸側（何款屬哪個界碑）屬義理之判，非形制可自動判，故不校（如實記其界）。
+#   管轄自印：三級指針幾枚・二級指針幾枚（只數不校）・帶掛名幾枚・靶不可求幾枚（管轄歸零即該目自己現形，五十二度）。
+#   二級之不校，今量為據：二級指針 37 枚、其中帶掛名 15 枚，试校之名實不合 2 枚俱在卷首【今時五病灶對讀索引】
+#         （L218『第八章第二節（反靈性煤氣燈操縱防護禁約）』之屬・L219『第八章第三節（未經羯磨擅自踢人…）』之屬）——
+#         彼乃索引之** paraphrase 撮述**，非節內之定題；口徑一寬紅便不準（五十三度），故二級之名只歸人工覆核。
+try:
+    CNH = u'〇一二三四五六七八九十'
+
+    def _cn2(s):
+        if s == u'十':
+            return 10
+        if u'十' in s:
+            a, _, b = s.partition(u'十')
+            return (CNH.index(a) if a else 1) * 10 + (CNH.index(b) if b else 0)
+        return CNH.index(s)
+
+    _h1 = [i for i, l in enumerate(LINES) if in_page(i) and l.startswith(u'# 第')
+           and re.match(u'^# 第[一二三四五六七八九十]+章', l)]
+    _tree = {}
+    for _c, _i in enumerate(_h1):
+        _hi = _h1[_c + 1] if _c + 1 < len(_h1) else len(LINES)
+        _sm = [(k, LINES[k]) for k in range(_i, _hi) if re.match(u'^### 第[一二三四五六七八九十]+節', LINES[k])]
+        _sm.append((_hi, u''))
+        _secs = {}
+        for _s in range(len(_sm) - 1):
+            _mm = re.match(u'^### 第([一二三四五六七八九十]+)節', _sm[_s][1])
+            if not _mm:
+                continue
+            _lo, _nx = _sm[_s][0], _sm[_s + 1][0]
+            _ku = {}
+            for _k in range(_lo, _nx):
+                _m = re.match(u'^#### 第?([一二三四五六七八九十]+)、(.+)', LINES[_k])
+                if _m:
+                    _ku[_cn2(_m.group(1))] = (_k, _m.group(2).strip())
+            _secs[_cn2(_mm.group(1))] = (_ku, _lo, _nx)
+        _tree[_cn2(re.match(u'^# 第([一二三四五六七八九十]+)章', LINES[_i]).group(1))] = _secs
+    _b, _n3, _n2, _nn, _ng = [], 0, 0, 0, 0
+    PTR = re.compile(u'第([一二三四五六七八九十]+)章第([一二三四五六七八九十]+)節'
+                     u'(?:第([一二三四五六七八九十]+)款)?')
+    for i, l in enumerate(LINES):
+        if not in_page(i):
+            continue
+        for m in PTR.finditer(l):
+            _ck, _sk = _cn2(m.group(1)), _cn2(m.group(2))
+            _nk = _cn2(m.group(3)) if m.group(3) else None
+            if _nk is None:
+                _n2 += 1
+                continue          # 二級只記其數，不校其名（口徑之由見檔首註）
+            _n3 += 1
+            node = (_tree.get(_ck) or {}).get(_sk)
+            if not node:
+                _ng += 1
+                continue
+            _ku, _lo, _nx = node
+            if _nk is not None and _nk not in _ku:
+                _b.append((i + 1, u'第%d章第%d節實無第%d款（其款次：%s）'
+                           % (_ck, _sk, _nk, u'・'.join(str(x) for x in sorted(_ku)))))
+                continue
+            _tail = l[m.end():m.end() + 40]
+            _nm = re.match(u'(?:[*]{2})?[（・]([^）\u3000，。；：]{3,30})', _tail)
+            if not _nm:
+                continue
+            _desc = _nm.group(1).strip()
+            if len(_desc) < 4:
+                continue
+            _nn += 1
+            if _nk is not None:
+                _hl, _hd = _ku[_nk]
+                _hay = _hd + u'\n' + u'\n'.join(LINES[_hl:_hl + 40])
+                _wh, _real = u'第%d款之款題' % _nk, _hd
+            else:
+                _hay = u'\n'.join(LINES[_lo:_nx])
+                _wh, _real = u'節內', LINES[_lo]
+            if _desc[:4] not in _hay:
+                _b.append((i + 1, u'掛名『%s…』不得見於第%d章第%d節%s➔實題『%s』'
+                           % (_desc[:8], _ck, _sk, _wh, _real[:26])))
+    chk(u'款級指針之名實對合', sorted(set(_b)),
+        u'三級 %d・二級 %d・帶掛名 %d・靶不可求 %d' % (_n3, _n2, _nn, _ng))
+except Exception as e:
+    chk(u'款級指針之名實對合', [(u'尺自身出錯：%s' % e,)])
+
+# ── 38：印面無退位之名（第 292 輪・奉外路第七報告『七大刀口』與作者「全做」之令而立）
+#   口徑：名制一改，舊名即入禁形。本目所禁者乃本書歷版用過、今已退位之名，非錯字（第 35 目不識）、
+#         非簡形（第 21 目不識）、非黑話（第 29 目不識）——後人若把舊名貼回，唯此目能紅。
+#         （形制禁令＝把人工覆核換成機器可驗之約，見 267 輪『幽靈名之治在禁形』之例。）
+#   所禁：『憲綱』（292 還三十二字於『略戒心印』，全書 30 枚已退）・『三鏡／第一鏡／第二鏡／第三鏡』
+#         （292 併入『腳下三問』與『夜半四照』，不另立隨身口訣）・『J-』『現-』（四境演繹判例今作
+#         現01〜現04，去連字號之工程遺跡）・『調部深描』（292 改稱『調部專題』；唯禁全串，
+#         『經典地標深描』與『病理學深描』乃第六章與第一章之自制，不在禁列）・
+#         〔案例 NN ／ 遮MM〕之斜線次碼（292 自正文退入附錄四〔新舊次碼對照〕，正文純號）。
+#   唯所不校：反引號內之圖例——凡例與對照節各以舊形示例，是『說明舊形之相』而非『使用舊形』。
+#   管轄自印：禁形幾類・印面幾行・命中幾處（管轄歸零即該目自己現形，五十二度）。
+try:
+    _BAN = [u'憲' + chr(0x7DB1), u'三鏡', u'第一鏡', u'第二鏡', u'第三鏡',
+            u'J-', u'現-', u'調部' + chr(0x6DF1) + chr(0x63CF),
+            u'〔案例 \\d+ ?/ ?(?:遮|僧|開)']
+    _RXS = [re.compile(p) for p in _BAN]
+    _b, _nrow = [], 0
+    for i, l in enumerate(LINES):
+        if not in_page(i):
+            continue
+        _nrow += 1
+        s = re.sub(u'`[^`]*`', u'', l)                  # 圖例不在此禁
+        for rx in _RXS:
+            for m in rx.finditer(s):
+                _b.append((i + 1, u'禁形『%s』' % m.group(0)[:22]))
+    chk(u'印面無退位之名（歷版名制之禁形）', sorted(set(_b)),
+        u'禁形 %d 類・印面 %d 行・命中 %d' % (len(_RXS), _nrow, len(_b)))
+except Exception as e:
+    chk(u'印面無退位之名（歷版名制之禁形）', [(u'尺自身出錯：%s' % e,)])
+
+# ── 38：尺亦須被尺量（第 272 輪・『不變量 N/N』之 N 自身即宣稱；275 順移 32，282 順移 34，284 順移 36，285 順移 37，288 順移 38、292 立禁形目而順移為 39）
 #   三則：① 目名須為**常量**（含 % 佔位者即把計數寫進標籤，靜態對合無從比對，且 FAIL 時面目全非）；
 #         ② try／except **兩支同名**（271 輪之《X犍度》目即因 except 改名而致『源中 31・實印 30』之差）；
 #         ③ 源碼中唯一目名之數 ＝ 本尺實印之目數（名單勿兩抄之自版：不另立名冊，逕讀本檔）。
